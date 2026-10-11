@@ -149,7 +149,7 @@
     border-left: 4px solid var(--c);
     box-shadow: var(--shadow);
     cursor: pointer;
-    word-break: break-word;
+    overflow-wrap: break-word;
     position: relative;
   }
   @media (prefers-color-scheme: dark) { .task { background: var(--cbd); } }
@@ -193,7 +193,32 @@
   }
   @keyframes slideIn { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
   .view .title { text-align: center; padding-left: 0; }
-  .col.allday .chead .dn { font-size: 15px; }
+  /* "No time" column stays pinned on the left while hours scroll under it */
+  .col.allday {
+    position: sticky; left: 0; z-index: 3;
+    flex-basis: clamp(120px, 34vw, 200px); width: clamp(120px, 34vw, 200px);
+    background: var(--panel);
+    box-shadow: 4px 0 10px rgba(0, 0, 0, .08);
+  }
+  .col.allday .chead .dn { font-size: 14px; }
+  .col.allday .chead .hint-s { display: block; font-size: 11px; color: var(--muted); font-weight: 500; }
+
+  /* ---------- Drag & drop ---------- */
+  .task { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  .task.dragging { opacity: .3; }
+  .ghost {
+    position: fixed; left: 0; top: 0; z-index: 40;
+    pointer-events: none;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .25);
+    transform-origin: 20% 20%;
+    opacity: .95;
+  }
+  body.dragging-on, body.dragging-on * { cursor: grabbing !important; }
+  .col.drop-target { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+  .col.drop-target .chead { color: var(--accent); }
+  .col.allday.drop-target { background: color-mix(in srgb, var(--accent) 12%, var(--panel)); }
+  .drop-line { height: 3px; border-radius: 2px; background: var(--accent); margin: -1.5px 2px; }
+  .tb-btn.drop-target { background: var(--accent); color: var(--accent-text); }
 
   /* ---------- Bottom sheets ---------- */
   #backdrop {
@@ -400,8 +425,10 @@
     if (a.time && b.time) return a.time.localeCompare(b.time) || a.created - b.created;
     if (a.time) return -1;
     if (b.time) return 1;
-    return a.created - b.created;
+    return rank(a) - rank(b);
   };
+  // manual order of tasks without time (set by drag & drop), falls back to creation time
+  const rank = t => t.order != null ? t.order : t.created;
   const groupByDate = () => {
     const m = new Map();
     for (const t of tasks) {
@@ -478,6 +505,7 @@
       const l = timeline.querySelector(`.col[data-date="${ds}"] .list`);
       if (l) l.scrollTop = top;
     }
+    remarkDragged(timeline);
     updateMonthLabel();
   }
 
@@ -545,7 +573,7 @@
     if (isNow) cls.push('now');
     return `<section class="${cls.join(' ')}" data-hour="${key}">
       <div class="chead">
-        <span class="dn">${label}</span>
+        <span class="dn">${label}${key === 'none' ? '<span class="hint-s">тяните на час →</span>' : ''}</span>
         ${list.length ? `<span class="cnt">${list.length}</span>` : ''}
       </div>
       <div class="list" data-act="add-empty">
@@ -571,6 +599,7 @@
     hoursEl.querySelectorAll('.col').forEach(c => { scrolls[c.dataset.hour] = c.querySelector('.list').scrollTop; });
     hoursEl.innerHTML = html;
     hoursEl.querySelectorAll('.col').forEach(c => { if (scrolls[c.dataset.hour]) c.querySelector('.list').scrollTop = scrolls[c.dataset.hour]; });
+    remarkDragged(hoursEl);
   }
 
   function scrollDayToDefaultHour() {
@@ -626,6 +655,180 @@
       case 'edit': openEditor(el.dataset.id); break;
     }
   });
+
+  // ---------- Drag & drop (mouse: just drag; touch: long-press, then drag) ----------
+  let drag = null;
+  let suppressClick = false;
+  const taskById = id => tasks.find(x => x.id === id);
+
+  document.addEventListener('pointerdown', e => {
+    const el = e.target.closest('.strip .task');
+    if (!el || e.button > 0) return;
+    drag = {
+      id: el.dataset.id, el, strip: el.closest('.strip'), pointerId: e.pointerId,
+      touch: e.pointerType !== 'mouse', active: false,
+      x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY
+    };
+    if (drag.touch) drag.timer = setTimeout(startDrag, 380);
+  });
+
+  document.addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    drag.x = e.clientX;
+    drag.y = e.clientY;
+    if (!drag.active) {
+      const dist = Math.hypot(drag.x - drag.x0, drag.y - drag.y0);
+      if (drag.touch) { if (dist > 10) endDrag(); }   // finger moved before long-press: it's a scroll
+      else if (dist > 6) startDrag();
+      return;
+    }
+    e.preventDefault();
+    moveGhost();
+  });
+
+  document.addEventListener('pointerup', e => {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    if (drag.active) {
+      dropTask();
+      suppressClick = true;
+      setTimeout(() => { suppressClick = false; }, 0);
+    }
+    endDrag();
+  });
+  document.addEventListener('pointercancel', e => { if (drag && e.pointerId === drag.pointerId) endDrag(); });
+  // stop the page from scrolling under the finger while a task is being dragged
+  document.addEventListener('touchmove', e => { if (drag && drag.active) e.preventDefault(); }, { passive: false });
+  document.addEventListener('click', e => {
+    if (suppressClick) { e.stopPropagation(); e.preventDefault(); suppressClick = false; }
+  }, true);
+  document.addEventListener('contextmenu', e => { if (e.target.closest('.task')) e.preventDefault(); });
+
+  // a re-render during a drag (e.g. the endless timeline loading more days) replaces the DOM
+  function remarkDragged(root) {
+    if (!drag || !drag.active) return;
+    const el = root.querySelector(`.task[data-id="${drag.id}"]`);
+    if (el) { el.classList.add('dragging'); drag.el = el; }
+  }
+
+  function startDrag() {
+    if (!drag || drag.active || !drag.el.isConnected) return;
+    drag.active = true;
+    const r = drag.el.getBoundingClientRect();
+    drag.dx = drag.x0 - r.left;
+    drag.dy = drag.y0 - r.top;
+    const g = drag.el.cloneNode(true);
+    g.classList.add('ghost');
+    g.style.width = r.width + 'px';
+    document.body.appendChild(g);
+    drag.ghost = g;
+    drag.el.classList.add('dragging');
+    document.body.classList.add('dragging-on');
+    if (drag.touch && navigator.vibrate) navigator.vibrate(15);
+    moveGhost();
+    requestAnimationFrame(dragLoop);
+  }
+
+  function moveGhost() {
+    drag.ghost.style.transform = `translate(${drag.x - drag.dx}px, ${drag.y - drag.dy}px) rotate(2deg) scale(1.03)`;
+  }
+
+  function endDrag() {
+    if (!drag) return;
+    clearTimeout(drag.timer);
+    if (drag.ghost) drag.ghost.remove();
+    clearDropMarks();
+    document.querySelectorAll('.task.dragging').forEach(el => el.classList.remove('dragging'));
+    document.body.classList.remove('dragging-on');
+    drag = null;
+  }
+
+  function clearDropMarks() {
+    document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+    document.querySelectorAll('.drop-line').forEach(el => el.remove());
+  }
+
+  // auto-scroll near the edges + recompute the drop target every frame
+  function dragLoop() {
+    if (!drag || !drag.active) return;
+    const s = drag.strip, r = s.getBoundingClientRect(), edge = 56;
+    let left = r.left, leftEdge = edge;
+    if (s === hoursEl) {
+      // hours slide under the pinned "no time" panel, so scroll back only right next to it
+      const pinned = hoursEl.querySelector('.col.allday');
+      if (pinned) { left = pinned.getBoundingClientRect().right; leftEdge = 32; }
+    }
+    if (drag.x >= left && drag.x < left + leftEdge) s.scrollLeft -= 4 + 14 * (1 - (drag.x - left) / leftEdge);
+    else if (drag.x > r.right - edge) s.scrollLeft += 4 + 14 * (1 - (r.right - drag.x) / edge);
+    const list = drag.target && drag.target.el.querySelector && drag.target.el.querySelector('.list');
+    if (list) {
+      const lr = list.getBoundingClientRect();
+      if (drag.y < lr.top + 40) list.scrollTop -= 8;
+      else if (drag.y > lr.bottom - 40) list.scrollTop += 8;
+    }
+    updateDropTarget();
+    requestAnimationFrame(dragLoop);
+  }
+
+  function updateDropTarget() {
+    const t = taskById(drag.id);
+    const under = document.elementFromPoint(drag.x, drag.y);
+    let target = null;
+    const btn = under && under.closest('#prevDay, #nextDay');
+    if (btn && dayDate) {
+      target = { kind: btn.id === 'prevDay' ? 'prev' : 'next', el: btn };
+    } else {
+      const col = under && under.closest('.col');
+      if (col && col.closest('.strip') === drag.strip) {
+        target = col.dataset.date
+          ? { kind: 'date', el: col, key: col.dataset.date }
+          : { kind: 'hour', el: col, key: col.dataset.hour };
+      }
+    }
+    // tasks without time keep a manual order, so show where exactly the task will land
+    let beforeEl = null, untimed = [];
+    const willBeUntimed = target && ((target.kind === 'date' && !t.time) || (target.kind === 'hour' && target.key === 'none'));
+    if (willBeUntimed) {
+      untimed = [...target.el.querySelectorAll('.list .task:not(.dragging)')].filter(el => !taskById(el.dataset.id).time);
+      beforeEl = untimed.find(el => { const b = el.getBoundingClientRect(); return drag.y < b.top + b.height / 2; }) || null;
+      const i = beforeEl ? untimed.indexOf(beforeEl) : untimed.length;
+      const prev = untimed[i - 1] && taskById(untimed[i - 1].dataset.id);
+      const next = untimed[i] && taskById(untimed[i].dataset.id);
+      target.order = prev && next ? (rank(prev) + rank(next)) / 2 : prev ? rank(prev) + 1 : next ? rank(next) - 1 : Date.now();
+    }
+    const sig = target ? `${target.kind}|${target.key}|${beforeEl ? beforeEl.dataset.id : ''}|${willBeUntimed}` : '';
+    const line = document.querySelector('.drop-line');
+    if (sig === drag.sig && target && target.el.isConnected && (!willBeUntimed || line)) { drag.target = target; return; }
+    drag.sig = sig;
+    drag.target = target;
+    clearDropMarks();
+    if (!target) return;
+    target.el.classList.add('drop-target');
+    if (willBeUntimed) {
+      const ln = document.createElement('div');
+      ln.className = 'drop-line';
+      const list = target.el.querySelector('.list');
+      list.insertBefore(ln, beforeEl || list.querySelector('.add'));
+    }
+  }
+
+  function dropTask() {
+    const t = taskById(drag.id), tg = drag.target;
+    if (!t || !tg) return;
+    const before = JSON.stringify(t);
+    if (tg.kind === 'prev' || tg.kind === 'next') {
+      t.date = addDays(t.date, tg.kind === 'prev' ? -1 : 1);
+      const d = parse(t.date);
+      toast(`Перенесено на ${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`);
+    } else if (tg.kind === 'date') {
+      t.date = tg.key;
+    } else if (tg.kind === 'hour') {
+      t.time = tg.key === 'none' ? '' : `${pad(tg.key)}:${t.time ? t.time.slice(3) : '00'}`;
+    }
+    if (tg.order != null) t.order = tg.order;
+    if (JSON.stringify(t) === before) return;
+    saveTasks();
+    rerender();
+  }
 
   // ---------- Mutations ----------
   function rerender() {
@@ -753,7 +956,8 @@
   backdrop.onclick = closeSheets;
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
-      if (document.querySelector('.sheet.on')) closeSheets();
+      if (drag) endDrag();
+      else if (document.querySelector('.sheet.on')) closeSheets();
       else if (dayDate) $('backBtn').click();
     }
   });

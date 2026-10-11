@@ -1,0 +1,848 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f4f5f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#15171d" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Планер</title>
+<style>
+  :root {
+    --bg: #f4f5f9;
+    --panel: #ffffff;
+    --card: #ffffff;
+    --line: #e3e5ec;
+    --text: #1b1d23;
+    --muted: #7a7f8c;
+    --accent: #4f7cff;
+    --accent-text: #ffffff;
+    --today: #4f7cff;
+    --weekend: #fbf6f0;
+    --shadow: 0 1px 2px rgba(20, 22, 30, .06), 0 2px 8px rgba(20, 22, 30, .05);
+    --danger: #e5484d;
+    --colw: clamp(150px, 45vw, 230px);
+    --topbar: 52px;
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-t: env(safe-area-inset-top, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15171d;
+      --panel: #1d2028;
+      --card: #242833;
+      --line: #2e3340;
+      --text: #e8eaf0;
+      --muted: #8d93a3;
+      --accent: #6b8fff;
+      --today: #6b8fff;
+      --weekend: #1b1d24;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3);
+    }
+  }
+  body[data-w="s"] { --colw: clamp(112px, 31vw, 160px); }
+  body[data-w="l"] { --colw: clamp(220px, 78vw, 360px); }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    overflow: hidden;
+    touch-action: manipulation;
+  }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  .hidden { display: none !important; }
+
+  /* ---------- Top bar ---------- */
+  .topbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: calc(var(--safe-t) + 6px) 10px 6px;
+    min-height: calc(var(--topbar) + var(--safe-t));
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+  }
+  .topbar .title { flex: 1; font-size: 18px; font-weight: 700; padding-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topbar .title small { display: block; font-size: 12px; font-weight: 500; color: var(--muted); }
+  .tb-btn {
+    height: 36px; min-width: 36px; padding: 0 12px;
+    border-radius: 10px;
+    background: var(--bg);
+    font-weight: 600; font-size: 14px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .tb-btn.icon { padding: 0; font-size: 20px; }
+
+  /* ---------- Horizontal strip of columns ---------- */
+  .strip {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+  .col {
+    flex: 0 0 var(--colw);
+    width: var(--colw);
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--line);
+    min-height: 0;
+  }
+  .col.weekend { background: var(--weekend); }
+  .col.month-start { border-left: 2px solid var(--muted); }
+  .chead {
+    flex: 0 0 auto;
+    display: flex; align-items: baseline; gap: 6px;
+    width: 100%;
+    padding: 10px 10px 8px;
+    text-align: left;
+    border-bottom: 1px solid var(--line);
+    background: inherit;
+  }
+  .chead .wd { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
+  .chead .dn { font-size: 20px; font-weight: 700; }
+  .chead .mn { font-size: 12px; color: var(--muted); }
+  .chead .cnt { margin-left: auto; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .chead .open { margin-left: auto; color: var(--muted); font-size: 16px; line-height: 1; }
+  .chead .cnt + .open { margin-left: 4px; }
+  .col.weekend .chead .wd { color: #d9822b; }
+  .col.today .chead .dn {
+    background: var(--today); color: #fff;
+    border-radius: 999px; padding: 0 8px; min-width: 30px; text-align: center;
+  }
+  .col.today .chead .wd { color: var(--today); }
+  .col.now { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+  .col.now .chead .dn { color: var(--accent); }
+
+  .list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    padding: 8px 6px calc(90px + var(--safe-b));
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .add {
+    padding: 8px; border-radius: 10px;
+    border: 1.5px dashed var(--line);
+    color: var(--muted); font-size: 13px;
+  }
+  .add:active { background: var(--panel); }
+
+  /* ---------- Task card ---------- */
+  .task {
+    display: flex; gap: 8px; align-items: flex-start;
+    padding: 8px 8px 8px 6px;
+    border-radius: 10px;
+    background: var(--cb);
+    border-left: 4px solid var(--c);
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    word-break: break-word;
+    position: relative;
+  }
+  @media (prefers-color-scheme: dark) { .task { background: var(--cbd); } }
+  .task:active { transform: scale(.985); }
+  .chk {
+    flex: 0 0 auto;
+    width: 20px; height: 20px; margin-top: 1px;
+    border-radius: 50%;
+    border: 2px solid var(--c);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 12px; font-weight: 700;
+  }
+  .chk::after { content: ""; }
+  .task.done .chk { background: var(--c); }
+  .task.done .chk::after { content: "✓"; }
+  .tbody { flex: 1; min-width: 0; }
+  .ttime { font-size: 12px; font-weight: 700; color: var(--c); font-variant-numeric: tabular-nums; }
+  .ttitle { font-weight: 600; }
+  .tnote { font-size: 12.5px; color: var(--muted); margin-top: 2px; white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .task.done .ttitle { text-decoration: line-through; opacity: .55; }
+  .task.done .tnote, .task.done .ttime { opacity: .55; }
+
+  /* ---------- FAB ---------- */
+  .fab {
+    position: fixed; right: 18px; bottom: calc(18px + var(--safe-b));
+    width: 58px; height: 58px; border-radius: 50%;
+    background: var(--accent); color: var(--accent-text);
+    font-size: 30px; line-height: 1;
+    box-shadow: 0 6px 18px rgba(79, 124, 255, .45);
+    z-index: 5;
+  }
+  .fab:active { transform: scale(.95); }
+
+  /* ---------- Day (hours) view ---------- */
+  .view {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    background: var(--bg);
+    z-index: 10;
+    animation: slideIn .18s ease-out;
+  }
+  @keyframes slideIn { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .view .title { text-align: center; padding-left: 0; }
+  .col.allday .chead .dn { font-size: 15px; }
+
+  /* ---------- Bottom sheets ---------- */
+  #backdrop {
+    position: fixed; inset: 0; background: rgba(0, 0, 0, .35);
+    z-index: 20; opacity: 0; pointer-events: none; transition: opacity .18s;
+  }
+  #backdrop.on { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    max-height: 92dvh; overflow-y: auto;
+    background: var(--panel);
+    border-radius: 18px 18px 0 0;
+    padding: 8px 16px calc(16px + var(--safe-b));
+    z-index: 21;
+    transform: translateY(105%);
+    transition: transform .22s ease;
+    max-width: 560px; margin: 0 auto;
+  }
+  .sheet.on { transform: none; }
+  .sheet .grab { width: 40px; height: 5px; border-radius: 3px; background: var(--line); margin: 0 auto 10px; }
+  .sheet h2 { font-size: 17px; margin: 4px 0 12px; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+  .inp {
+    width: 100%; font: inherit; font-size: 16px; color: var(--text);
+    background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 12px; outline: none;
+  }
+  .inp:focus { border-color: var(--accent); }
+  textarea.inp { resize: vertical; min-height: 70px; }
+  .row { display: flex; gap: 10px; }
+  .row > .field { flex: 1; min-width: 0; }
+  .timewrap { display: flex; gap: 6px; }
+  .timewrap .inp { flex: 1; min-width: 0; }
+  .clr { flex: 0 0 auto; width: 40px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); color: var(--muted); }
+  .swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+  .sw {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--c);
+    box-shadow: 0 0 0 2px var(--panel), 0 0 0 2px transparent;
+    position: relative;
+  }
+  .sw.on { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--c); }
+  .sw.custom { background: conic-gradient(#ef4444, #f5a524, #22b07d, #14b8a6, #4f7cff, #a855f7, #ec4899, #ef4444); overflow: hidden; }
+  .sw.custom input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+  .check-row { display: flex; align-items: center; gap: 10px; padding: 6px 0 12px; font-weight: 600; }
+  .check-row input { width: 20px; height: 20px; accent-color: var(--accent); }
+  .actions { display: flex; gap: 10px; margin-top: 6px; }
+  .btn {
+    flex: 1; height: 46px; border-radius: 12px; font-weight: 700;
+    background: var(--bg); border: 1px solid var(--line);
+  }
+  .btn.primary { background: var(--accent); color: var(--accent-text); border-color: transparent; }
+  .btn.danger { color: var(--danger); flex: 0 0 auto; padding: 0 16px; }
+  .menu-item {
+    display: flex; align-items: center; gap: 12px;
+    width: 100%; padding: 14px 4px; text-align: left;
+    border-bottom: 1px solid var(--line); font-size: 16px;
+  }
+  .menu-item:last-child { border-bottom: 0; }
+  .menu-item .ico { width: 24px; text-align: center; }
+  .seg { display: flex; background: var(--bg); border-radius: 10px; padding: 3px; margin: 4px 0 8px; }
+  .seg button { flex: 1; height: 36px; border-radius: 8px; font-weight: 600; font-size: 14px; color: var(--muted); }
+  .seg button.on { background: var(--panel); color: var(--text); box-shadow: var(--shadow); }
+  .hint { font-size: 12px; color: var(--muted); margin: 10px 0 0; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: calc(90px + var(--safe-b));
+    transform: translateX(-50%) translateY(20px);
+    background: #1b1d23; color: #fff; padding: 10px 16px; border-radius: 12px;
+    font-size: 14px; opacity: 0; pointer-events: none; transition: .2s; z-index: 30;
+    max-width: calc(100% - 32px);
+  }
+  .toast.on { opacity: 1; transform: translateX(-50%); }
+</style>
+</head>
+<body data-w="m">
+
+<!-- ===== Main timeline: days left → right ===== -->
+<header class="topbar">
+  <div class="title" id="monthLabel">Планер</div>
+  <button class="tb-btn" id="todayBtn">Сегодня</button>
+  <button class="tb-btn icon" id="menuBtn" aria-label="Меню">⋯</button>
+</header>
+<main class="strip" id="timeline"></main>
+<button class="fab" id="fab" aria-label="Добавить дело">+</button>
+
+<!-- ===== Day view: hours left → right ===== -->
+<section class="view hidden" id="dayView">
+  <header class="topbar">
+    <button class="tb-btn icon" id="backBtn" aria-label="Назад">‹</button>
+    <button class="tb-btn icon" id="prevDay" aria-label="Предыдущий день">«</button>
+    <div class="title" id="dayTitle"></div>
+    <button class="tb-btn icon" id="nextDay" aria-label="Следующий день">»</button>
+    <button class="tb-btn" id="dayNowBtn">Сейчас</button>
+  </header>
+  <main class="strip" id="hours"></main>
+  <button class="fab" id="fabDay" aria-label="Добавить дело">+</button>
+</section>
+
+<!-- ===== Sheets ===== -->
+<div id="backdrop"></div>
+
+<form class="sheet" id="editor" autocomplete="off">
+  <div class="grab"></div>
+  <h2 id="edTitle">Новое дело</h2>
+  <div class="field">
+    <label for="fTitle">Название</label>
+    <input class="inp" id="fTitle" maxlength="200" placeholder="Что нужно сделать?" required>
+  </div>
+  <div class="row">
+    <div class="field">
+      <label for="fDate">Дата</label>
+      <input class="inp" id="fDate" type="date" required>
+    </div>
+    <div class="field">
+      <label for="fTime">Время</label>
+      <div class="timewrap">
+        <input class="inp" id="fTime" type="time">
+        <button type="button" class="clr" id="clrTime" aria-label="Без времени">✕</button>
+      </div>
+    </div>
+  </div>
+  <div class="field">
+    <label>Цвет</label>
+    <div class="swatches" id="swatches"></div>
+  </div>
+  <div class="field">
+    <label for="fNote">Заметка</label>
+    <textarea class="inp" id="fNote" rows="3" placeholder="Подробности (необязательно)"></textarea>
+  </div>
+  <label class="check-row" id="doneRow"><input type="checkbox" id="fDone"> Выполнено</label>
+  <div class="actions">
+    <button type="button" class="btn danger" id="delBtn">Удалить</button>
+    <button type="button" class="btn" id="cancelBtn">Отмена</button>
+    <button type="submit" class="btn primary">Сохранить</button>
+  </div>
+</form>
+
+<div class="sheet" id="menu">
+  <div class="grab"></div>
+  <h2>Настройки</h2>
+  <div class="field">
+    <label>Ширина колонок</label>
+    <div class="seg" id="widthSeg">
+      <button data-w="s">Узкие</button>
+      <button data-w="m">Средние</button>
+      <button data-w="l">Широкие</button>
+    </div>
+  </div>
+  <button class="menu-item" id="exportBtn"><span class="ico">⬇</span> Сохранить резервную копию</button>
+  <button class="menu-item" id="importBtn"><span class="ico">⬆</span> Загрузить из копии</button>
+  <button class="menu-item" id="clearDoneBtn"><span class="ico">🧹</span> Удалить выполненные</button>
+  <p class="hint">Дела хранятся в памяти браузера на этом устройстве. Иногда делайте резервную копию — её можно перенести на другое устройство.</p>
+</div>
+<input type="file" id="importFile" accept="application/json,.json" hidden>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  // ---------- Storage ----------
+  const KEY = 'planner.tasks.v1';
+  const SKEY = 'planner.settings.v1';
+  const store = {
+    get(k, def) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch { return def; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { toast('Не удалось сохранить в память браузера'); } }
+  };
+  let tasks = store.get(KEY, []);
+  if (!Array.isArray(tasks)) tasks = [];
+  const settings = Object.assign({ w: 'm', color: '#4f7cff' }, store.get(SKEY, {}));
+  const saveTasks = () => store.set(KEY, tasks);
+  const saveSettings = () => store.set(SKEY, settings);
+
+  const COLORS = ['#4f7cff', '#22b07d', '#f5a524', '#ef4444', '#a855f7', '#ec4899', '#14b8a6', '#64748b'];
+  const WD = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+  const WD_FULL = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
+  const MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+  const MONTHS_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+  const MONTHS_SHORT = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+
+  // ---------- Date helpers (local time, 'YYYY-MM-DD') ----------
+  const pad = n => String(n).padStart(2, '0');
+  const fmt = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return fmt(d); };
+  const diffDays = (a, b) => Math.round((parse(b) - parse(a)) / 864e5);
+  const today = () => fmt(new Date());
+
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+  const rgba = (hex, a) => {
+    let h = hex.replace('#', '');
+    if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    const n = parseInt(h, 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+  };
+
+  const $ = id => document.getElementById(id);
+  const byOrder = (a, b) => {
+    if (a.time && b.time) return a.time.localeCompare(b.time) || a.created - b.created;
+    if (a.time) return -1;
+    if (b.time) return 1;
+    return a.created - b.created;
+  };
+  const groupByDate = () => {
+    const m = new Map();
+    for (const t of tasks) {
+      if (!m.has(t.date)) m.set(t.date, []);
+      m.get(t.date).push(t);
+    }
+    for (const list of m.values()) list.sort(byOrder);
+    return m;
+  };
+
+  function toast(msg) {
+    const el = $('toast');
+    el.textContent = msg;
+    el.classList.add('on');
+    clearTimeout(toast.t);
+    toast.t = setTimeout(() => el.classList.remove('on'), 2200);
+  }
+
+  // ---------- Task card ----------
+  function card(t) {
+    const style = `--c:${t.color};--cb:${rgba(t.color, .14)};--cbd:${rgba(t.color, .2)}`;
+    return `<div class="task${t.done ? ' done' : ''}" data-act="edit" data-id="${t.id}" style="${style}">
+      <button class="chk" data-act="toggle" aria-label="Выполнено"></button>
+      <div class="tbody">
+        ${t.time ? `<div class="ttime">${t.time}</div>` : ''}
+        <div class="ttitle">${esc(t.title)}</div>
+        ${t.note ? `<div class="tnote">${esc(t.note)}</div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  // ---------- Timeline (days) ----------
+  const timeline = $('timeline');
+  let rangeStart = addDays(today(), -21);
+  let rangeEnd = addDays(today(), 60);
+
+  function dayColumn(ds, list, todayStr) {
+    const d = parse(ds), wd = d.getDay();
+    const cls = ['col'];
+    if (ds === todayStr) cls.push('today');
+    if (wd === 0 || wd === 6) cls.push('weekend');
+    if (d.getDate() === 1) cls.push('month-start');
+    const done = list.filter(t => t.done).length;
+    return `<section class="${cls.join(' ')}" data-date="${ds}">
+      <button class="chead" data-act="open-day">
+        <span class="wd">${WD[wd]}</span><span class="dn">${d.getDate()}</span><span class="mn">${MONTHS_SHORT[d.getMonth()]}</span>
+        ${list.length ? `<span class="cnt">${done}/${list.length}</span>` : ''}
+        <span class="open">›</span>
+      </button>
+      <div class="list" data-act="add-empty">
+        ${list.map(card).join('')}
+        <button class="add" data-act="add">+ Добавить</button>
+      </div>
+    </section>`;
+  }
+
+  function renderTimeline() {
+    // keep vertical scroll positions of columns while re-rendering
+    const scrolls = {};
+    timeline.querySelectorAll('.col').forEach(c => {
+      const l = c.querySelector('.list');
+      if (l.scrollTop) scrolls[c.dataset.date] = l.scrollTop;
+    });
+    const groups = groupByDate();
+    const t = today();
+    const n = diffDays(rangeStart, rangeEnd);
+    let html = '';
+    for (let i = 0; i <= n; i++) {
+      const ds = addDays(rangeStart, i);
+      html += dayColumn(ds, groups.get(ds) || [], t);
+    }
+    timeline.innerHTML = html;
+    for (const [ds, top] of Object.entries(scrolls)) {
+      const l = timeline.querySelector(`.col[data-date="${ds}"] .list`);
+      if (l) l.scrollTop = top;
+    }
+    updateMonthLabel();
+  }
+
+  const colWidth = () => (timeline.querySelector('.col') || {}).offsetWidth || 1;
+
+  function scrollToDate(ds, smooth) {
+    if (ds < rangeStart) { rangeStart = addDays(ds, -21); renderTimeline(); }
+    if (ds > rangeEnd) { rangeEnd = addDays(ds, 30); renderTimeline(); }
+    const x = diffDays(rangeStart, ds) * colWidth();
+    timeline.scrollTo({ left: Math.max(0, x - colWidth() * 0.25), behavior: smooth ? 'smooth' : 'auto' });
+  }
+
+  function leftmostDate() {
+    const idx = Math.floor((timeline.scrollLeft + colWidth() * 0.5) / colWidth());
+    return addDays(rangeStart, idx);
+  }
+
+  function updateMonthLabel() {
+    const d = parse(leftmostDate());
+    $('monthLabel').textContent = `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  }
+
+  let ticking = false;
+  timeline.addEventListener('scroll', () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      ticking = false;
+      const w = colWidth();
+      if (timeline.scrollLeft < w * 4) {
+        const before = timeline.scrollLeft;
+        rangeStart = addDays(rangeStart, -30);
+        renderTimeline();
+        timeline.scrollLeft = before + 30 * w;
+      } else if (timeline.scrollLeft + timeline.clientWidth > timeline.scrollWidth - w * 4) {
+        rangeEnd = addDays(rangeEnd, 30);
+        renderTimeline();
+      }
+      updateMonthLabel();
+    });
+  }, { passive: true });
+
+  timeline.addEventListener('click', e => {
+    const el = e.target.closest('[data-act]');
+    if (!el) return;
+    const col = el.closest('.col');
+    const date = col && col.dataset.date;
+    switch (el.dataset.act) {
+      case 'open-day': openDay(date, true); break;
+      case 'add': openEditor(null, { date }); break;
+      case 'add-empty': if (e.target === el) openEditor(null, { date }); break;
+      case 'toggle': e.stopPropagation(); toggleDone(el.closest('.task').dataset.id); break;
+      case 'edit': openEditor(el.dataset.id); break;
+    }
+  });
+
+  // ---------- Day view (hours) ----------
+  const dayView = $('dayView');
+  const hoursEl = $('hours');
+  let dayDate = null;
+
+  function hourColumn(key, label, list, isNow) {
+    const cls = ['col'];
+    if (key === 'none') cls.push('allday');
+    if (isNow) cls.push('now');
+    return `<section class="${cls.join(' ')}" data-hour="${key}">
+      <div class="chead">
+        <span class="dn">${label}</span>
+        ${list.length ? `<span class="cnt">${list.length}</span>` : ''}
+      </div>
+      <div class="list" data-act="add-empty">
+        ${list.map(card).join('')}
+        <button class="add" data-act="add">+ Добавить</button>
+      </div>
+    </section>`;
+  }
+
+  function renderDay() {
+    if (!dayDate) return;
+    const d = parse(dayDate);
+    const isToday = dayDate === today();
+    $('dayTitle').innerHTML = `${d.getDate()} ${MONTHS_GEN[d.getMonth()]}<small>${isToday ? 'сегодня, ' : ''}${WD_FULL[d.getDay()]}</small>`;
+    const list = tasks.filter(t => t.date === dayDate).sort(byOrder);
+    const byHour = Array.from({ length: 24 }, () => []);
+    const none = [];
+    for (const t of list) t.time ? byHour[parseInt(t.time, 10)].push(t) : none.push(t);
+    const nowH = new Date().getHours();
+    let html = hourColumn('none', 'Без времени', none, false);
+    for (let h = 0; h < 24; h++) html += hourColumn(h, `${pad(h)}:00`, byHour[h], isToday && h === nowH);
+    const scrolls = {};
+    hoursEl.querySelectorAll('.col').forEach(c => { scrolls[c.dataset.hour] = c.querySelector('.list').scrollTop; });
+    hoursEl.innerHTML = html;
+    hoursEl.querySelectorAll('.col').forEach(c => { if (scrolls[c.dataset.hour]) c.querySelector('.list').scrollTop = scrolls[c.dataset.hour]; });
+  }
+
+  function scrollDayToDefaultHour() {
+    const list = tasks.filter(t => t.date === dayDate && t.time).sort(byOrder);
+    let h;
+    if (dayDate === today()) h = new Date().getHours();
+    else if (list.length) h = parseInt(list[0].time, 10);
+    else h = 8;
+    scrollToHour(h);
+  }
+  function scrollToHour(h) {
+    const col = hoursEl.querySelector(`.col[data-hour="${h}"]`);
+    if (col) hoursEl.scrollLeft = Math.max(0, col.offsetLeft - col.offsetWidth * 0.25);
+  }
+
+  function openDay(ds, push) {
+    const wasOpen = !dayView.classList.contains('hidden');
+    dayDate = ds;
+    hoursEl.innerHTML = '';
+    dayView.classList.remove('hidden');
+    renderDay();
+    scrollDayToDefaultHour();
+    if (push && !wasOpen) history.pushState({ day: ds }, '');
+  }
+  function closeDay() {
+    closeSheets();
+    dayView.classList.add('hidden');
+    const ds = dayDate;
+    dayDate = null;
+    renderTimeline();
+    if (ds) scrollToDate(ds, false);
+  }
+
+  $('backBtn').onclick = () => history.state && history.state.day ? history.back() : closeDay();
+  window.addEventListener('popstate', () => { if (dayDate) closeDay(); });
+  $('prevDay').onclick = () => { dayDate = addDays(dayDate, -1); hoursEl.innerHTML = ''; renderDay(); scrollDayToDefaultHour(); };
+  $('nextDay').onclick = () => { dayDate = addDays(dayDate, 1); hoursEl.innerHTML = ''; renderDay(); scrollDayToDefaultHour(); };
+  $('dayNowBtn').onclick = () => {
+    if (dayDate !== today()) { dayDate = today(); hoursEl.innerHTML = ''; renderDay(); }
+    scrollToHour(new Date().getHours());
+  };
+
+  hoursEl.addEventListener('click', e => {
+    const el = e.target.closest('[data-act]');
+    if (!el) return;
+    const col = el.closest('.col');
+    const hour = col && col.dataset.hour;
+    const time = hour && hour !== 'none' ? `${pad(hour)}:00` : '';
+    switch (el.dataset.act) {
+      case 'add': openEditor(null, { date: dayDate, time }); break;
+      case 'add-empty': if (e.target === el) openEditor(null, { date: dayDate, time }); break;
+      case 'toggle': e.stopPropagation(); toggleDone(el.closest('.task').dataset.id); break;
+      case 'edit': openEditor(el.dataset.id); break;
+    }
+  });
+
+  // ---------- Mutations ----------
+  function rerender() {
+    if (dayDate) renderDay();
+    renderTimeline();
+  }
+  function toggleDone(id) {
+    const t = tasks.find(x => x.id === id);
+    if (!t) return;
+    t.done = !t.done;
+    saveTasks();
+    rerender();
+  }
+
+  // ---------- Editor sheet ----------
+  const editor = $('editor');
+  const backdrop = $('backdrop');
+  let editingId = null;
+  let pickedColor = settings.color;
+
+  function renderSwatches() {
+    const isCustom = !COLORS.includes(pickedColor);
+    $('swatches').innerHTML =
+      COLORS.map(c => `<button type="button" class="sw${c === pickedColor ? ' on' : ''}" data-color="${c}" style="--c:${c}" aria-label="Цвет ${c}"></button>`).join('') +
+      `<label class="sw custom${isCustom ? ' on' : ''}" style="--c:${isCustom ? pickedColor : '#888'}" aria-label="Свой цвет">
+         <input type="color" id="customColor" value="${isCustom ? pickedColor : '#888888'}">
+       </label>`;
+  }
+  $('swatches').addEventListener('click', e => {
+    const b = e.target.closest('[data-color]');
+    if (!b) return;
+    pickedColor = b.dataset.color;
+    renderSwatches();
+  });
+  $('swatches').addEventListener('input', e => {
+    if (e.target.id !== 'customColor') return;
+    pickedColor = e.target.value;
+    $('swatches').querySelectorAll('.sw').forEach(s => s.classList.toggle('on', s.classList.contains('custom')));
+    $('swatches').querySelector('.custom').style.setProperty('--c', pickedColor);
+  });
+
+  function openEditor(id, preset = {}) {
+    editingId = id;
+    const t = id ? tasks.find(x => x.id === id) : null;
+    $('edTitle').textContent = t ? 'Изменить дело' : 'Новое дело';
+    $('fTitle').value = t ? t.title : '';
+    $('fNote').value = t ? (t.note || '') : '';
+    $('fDate').value = t ? t.date : (preset.date || today());
+    $('fTime').value = t ? (t.time || '') : (preset.time || '');
+    $('fDone').checked = t ? !!t.done : false;
+    $('doneRow').classList.toggle('hidden', !t);
+    $('delBtn').classList.toggle('hidden', !t);
+    pickedColor = t ? t.color : settings.color;
+    renderSwatches();
+    showSheet(editor);
+    if (!t) setTimeout(() => $('fTitle').focus(), 60);
+  }
+
+  editor.addEventListener('submit', e => {
+    e.preventDefault();
+    const title = $('fTitle').value.trim();
+    if (!title) { $('fTitle').focus(); return; }
+    const date = $('fDate').value || today();
+    const data = {
+      title,
+      note: $('fNote').value.trim(),
+      date,
+      time: $('fTime').value || '',
+      color: pickedColor,
+      done: $('fDone').checked
+    };
+    if (editingId) {
+      Object.assign(tasks.find(x => x.id === editingId), data);
+    } else {
+      tasks.push(Object.assign({ id: uid(), created: Date.now() }, data, { done: false }));
+    }
+    settings.color = pickedColor;
+    saveSettings();
+    saveTasks();
+    closeSheets();
+    rerender();
+    if (!dayDate) scrollIntoViewIfHidden(date);
+  });
+
+  function scrollIntoViewIfHidden(ds) {
+    const x = diffDays(rangeStart, ds) * colWidth();
+    if (x < timeline.scrollLeft || x + colWidth() > timeline.scrollLeft + timeline.clientWidth) scrollToDate(ds, true);
+  }
+
+  $('delBtn').onclick = () => {
+    const i = tasks.findIndex(x => x.id === editingId);
+    if (i < 0) return;
+    const [removed] = tasks.splice(i, 1);
+    saveTasks();
+    closeSheets();
+    rerender();
+    showUndo(removed);
+  };
+  function showUndo(t) {
+    const el = $('toast');
+    el.innerHTML = `Дело удалено · <u style="cursor:pointer;pointer-events:auto">Вернуть</u>`;
+    el.classList.add('on');
+    el.style.pointerEvents = 'auto';
+    el.onclick = () => {
+      tasks.push(t); saveTasks(); rerender();
+      el.classList.remove('on'); el.style.pointerEvents = ''; el.onclick = null;
+    };
+    clearTimeout(toast.t);
+    toast.t = setTimeout(() => { el.classList.remove('on'); el.style.pointerEvents = ''; el.onclick = null; }, 4000);
+  }
+
+  $('cancelBtn').onclick = closeSheets;
+  $('clrTime').onclick = () => { $('fTime').value = ''; };
+
+  function showSheet(el) {
+    closeSheets();
+    backdrop.classList.add('on');
+    el.classList.add('on');
+  }
+  function closeSheets() {
+    backdrop.classList.remove('on');
+    document.querySelectorAll('.sheet.on').forEach(s => s.classList.remove('on'));
+    if (document.activeElement) document.activeElement.blur();
+  }
+  backdrop.onclick = closeSheets;
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      if (document.querySelector('.sheet.on')) closeSheets();
+      else if (dayDate) $('backBtn').click();
+    }
+  });
+
+  // ---------- Menu ----------
+  function applyWidth() {
+    document.body.dataset.w = settings.w;
+    $('widthSeg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.w === settings.w));
+  }
+  $('menuBtn').onclick = () => { applyWidth(); showSheet($('menu')); };
+  $('widthSeg').onclick = e => {
+    const b = e.target.closest('[data-w]');
+    if (!b) return;
+    const keep = leftmostDate();
+    settings.w = b.dataset.w;
+    saveSettings();
+    applyWidth();
+    scrollToDate(keep, false);
+    timeline.scrollLeft = diffDays(rangeStart, keep) * colWidth();
+  };
+
+  $('exportBtn').onclick = () => {
+    const blob = new Blob([JSON.stringify({ app: 'planner', version: 1, tasks }, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `planner-${today()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    closeSheets();
+  };
+  $('importBtn').onclick = () => $('importFile').click();
+  $('importFile').onchange = async e => {
+    const f = e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    try {
+      const data = JSON.parse(await f.text());
+      const list = Array.isArray(data) ? data : data.tasks;
+      if (!Array.isArray(list)) throw new Error();
+      const valid = list.filter(t => t && t.id && t.title && /^\d{4}-\d{2}-\d{2}$/.test(t.date));
+      const replace = confirm(`В файле ${valid.length} дел.\n\nОК — заменить текущие дела.\nОтмена — добавить к текущим.`);
+      if (replace) tasks = valid;
+      else {
+        const ids = new Set(tasks.map(t => t.id));
+        tasks = tasks.concat(valid.filter(t => !ids.has(t.id)));
+      }
+      tasks.forEach(t => { t.color = t.color || COLORS[0]; t.created = t.created || Date.now(); t.time = t.time || ''; });
+      saveTasks();
+      closeSheets();
+      rerender();
+      toast('Дела загружены');
+    } catch {
+      toast('Не удалось прочитать файл');
+    }
+  };
+  $('clearDoneBtn').onclick = () => {
+    const n = tasks.filter(t => t.done).length;
+    if (!n) { toast('Нет выполненных дел'); return; }
+    if (!confirm(`Удалить выполненные дела (${n})?`)) return;
+    tasks = tasks.filter(t => !t.done);
+    saveTasks();
+    closeSheets();
+    rerender();
+  };
+
+  // ---------- Global buttons ----------
+  $('todayBtn').onclick = () => scrollToDate(today(), true);
+  $('fab').onclick = () => openEditor(null, { date: today() });
+  $('fabDay').onclick = () => {
+    let time = '';
+    if (dayDate === today()) time = `${pad(Math.min(23, new Date().getHours() + 1))}:00`;
+    openEditor(null, { date: dayDate, time });
+  };
+
+  // Refresh "today" highlight when the date changes while the app stays open
+  let lastToday = today();
+  setInterval(() => {
+    if (today() !== lastToday) { lastToday = today(); rerender(); }
+    else if (dayDate === today()) renderDay();
+  }, 60000);
+
+  // ---------- Start ----------
+  applyWidth();
+  renderTimeline();
+  scrollToDate(today(), false);
+  if (history.state && history.state.day) history.replaceState(null, '');
+})();
+</script>
+</body>
+</html>

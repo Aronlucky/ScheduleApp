@@ -182,6 +182,30 @@
     z-index: 5;
   }
   .fab:active { transform: scale(.95); }
+  .fab.mic {
+    right: 23px; bottom: calc(18px + 58px + 12px + var(--safe-b));
+    width: 48px; height: 48px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--panel); color: var(--accent);
+    box-shadow: 0 4px 14px rgba(20, 22, 30, .18);
+  }
+
+  /* ---------- Voice input ---------- */
+  .voice-top { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+  .mic-big {
+    flex: 0 0 auto; width: 64px; height: 64px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--bg); color: var(--accent);
+  }
+  .mic-big svg { width: 28px; height: 28px; }
+  .mic-big.on { background: var(--danger); color: #fff; animation: pulse 1.2s ease-out infinite; }
+  @keyframes pulse { from { box-shadow: 0 0 0 0 rgba(229, 72, 77, .5); } to { box-shadow: 0 0 0 18px rgba(229, 72, 77, 0); } }
+  .voice-status { flex: 1; color: var(--muted); font-size: 14px; }
+  .vprev { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; min-height: 28px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; background: var(--bg); border-radius: 999px; padding: 4px 10px; font-size: 13px; font-weight: 600; }
+  .chip .dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+  .task.flash { animation: flash 1.4s ease-out; }
+  @keyframes flash { 0%, 40% { box-shadow: 0 0 0 3px var(--accent); } 100% { box-shadow: var(--shadow); } }
 
   /* ---------- Day (hours) view ---------- */
   .view {
@@ -304,6 +328,7 @@
   <button class="tb-btn icon" id="menuBtn" aria-label="Меню">⋯</button>
 </header>
 <main class="strip" id="timeline"></main>
+<button class="fab mic" id="micBtn" aria-label="Добавить голосом"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 17v4"/><path d="M8 21h8"/></svg></button>
 <button class="fab" id="fab" aria-label="Добавить дело">+</button>
 
 <!-- ===== Day view: hours left → right ===== -->
@@ -316,6 +341,7 @@
     <button class="tb-btn" id="dayNowBtn">Сейчас</button>
   </header>
   <main class="strip" id="hours"></main>
+  <button class="fab mic" id="micDay" aria-label="Добавить голосом"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 17v4"/><path d="M8 21h8"/></svg></button>
   <button class="fab" id="fabDay" aria-label="Добавить дело">+</button>
 </section>
 
@@ -375,6 +401,22 @@
   <p class="hint">Дела хранятся в памяти браузера на этом устройстве. Иногда делайте резервную копию — её можно перенести на другое устройство.</p>
 </div>
 <input type="file" id="importFile" accept="application/json,.json" hidden>
+
+<div class="sheet" id="voice">
+  <div class="grab"></div>
+  <h2>Добавить голосом</h2>
+  <div class="voice-top">
+    <button type="button" class="mic-big" id="micBig" aria-label="Говорить"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 17v4"/><path d="M8 21h8"/></svg></button>
+    <div class="voice-status" id="vStatus"></div>
+  </div>
+  <textarea class="inp" id="vText" rows="2" placeholder="Например: завтра в 15:30 позвонить маме"></textarea>
+  <div class="vprev" id="vPrev"></div>
+  <p class="hint">Скажите день, время (если нужно) и само дело: «Завтра в 15:30 позвонить маме», «В пятницу купить продукты», «12 ноября в 9 утра к врачу», «Через 2 часа забрать посылку», «Вечером тренировка красным цветом».</p>
+  <div class="actions">
+    <button type="button" class="btn" id="vCancel">Отмена</button>
+    <button type="button" class="btn primary" id="vAdd">Добавить</button>
+  </div>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -442,6 +484,8 @@
   function toast(msg) {
     const el = $('toast');
     el.textContent = msg;
+    el.onclick = null;
+    el.style.pointerEvents = '';
     el.classList.add('on');
     clearTimeout(toast.t);
     toast.t = setTimeout(() => el.classList.remove('on'), 2200);
@@ -928,16 +972,18 @@
     showUndo(removed);
   };
   function showUndo(t) {
+    toastAction('Дело удалено', 'Вернуть', () => { tasks.push(t); saveTasks(); rerender(); });
+  }
+  // toast with a tappable action; html must already be escaped
+  function toastAction(html, label, fn, ms = 4000) {
     const el = $('toast');
-    el.innerHTML = `Дело удалено · <u style="cursor:pointer;pointer-events:auto">Вернуть</u>`;
+    const hide = () => { el.classList.remove('on'); el.style.pointerEvents = ''; el.onclick = null; };
+    el.innerHTML = `${html} · <u style="cursor:pointer">${label}</u>`;
     el.classList.add('on');
     el.style.pointerEvents = 'auto';
-    el.onclick = () => {
-      tasks.push(t); saveTasks(); rerender();
-      el.classList.remove('on'); el.style.pointerEvents = ''; el.onclick = null;
-    };
+    el.onclick = () => { hide(); fn(); };
     clearTimeout(toast.t);
-    toast.t = setTimeout(() => { el.classList.remove('on'); el.style.pointerEvents = ''; el.onclick = null; }, 4000);
+    toast.t = setTimeout(hide, ms);
   }
 
   $('cancelBtn').onclick = closeSheets;
@@ -949,6 +995,7 @@
     el.classList.add('on');
   }
   function closeSheets() {
+    stopListening();
     backdrop.classList.remove('on');
     document.querySelectorAll('.sheet.on').forEach(s => s.classList.remove('on'));
     if (document.activeElement) document.activeElement.blur();
@@ -1024,6 +1071,274 @@
     closeSheets();
     rerender();
   };
+
+  // ---------- Quick add from a Russian phrase ("завтра в 15:30 позвонить маме") ----------
+  const B = '(?<![\\p{L}\\d])', E = '(?![\\p{L}\\d])';
+  const R = (src, flags = 'u') => new RegExp(src, flags);
+  const ORD = {
+    перв: 1, втор: 2, трет: 3, четверт: 4, пят: 5, шест: 6, седьм: 7, восьм: 8, девят: 9, десят: 10,
+    одиннадцат: 11, двенадцат: 12, тринадцат: 13, четырнадцат: 14, пятнадцат: 15, шестнадцат: 16,
+    семнадцат: 17, восемнадцат: 18, девятнадцат: 19, двадцат: 20, тридцат: 30
+  };
+  const longestFirst = o => Object.keys(o).sort((a, b) => b.length - a.length).join('|');
+  const ORD_RE = `(?:(?<ot>двадцать|тридцать)\\s+)?(?<os>${longestFirst(ORD)})(?:ьего|ье|его|ого|ое|ый|ий|ой)`;
+  const ordVal = g => (g.ot ? (g.ot === 'двадцать' ? 20 : 30) : 0) + ORD[g.os];
+  const CARD = {
+    один: 1, одного: 1, одну: 1, час: 1, два: 2, две: 2, двух: 2, пару: 2, три: 3, трех: 3, четыре: 4, четырех: 4,
+    пять: 5, пяти: 5, шесть: 6, шести: 6, семь: 7, семи: 7, восемь: 8, восьми: 8, девять: 9, девяти: 9,
+    десять: 10, десяти: 10, одиннадцать: 11, одиннадцати: 11, двенадцать: 12, двенадцати: 12
+  };
+  const CARD_RE = longestFirst(CARD);
+  const numVal = s => /^\d+$/.test(s) ? +s : CARD[s];
+  const MONTH_STEMS = ['январ', 'феврал', 'март', 'апрел', 'ма', 'июн', 'июл', 'август', 'сентябр', 'октябр', 'ноябр', 'декабр'];
+  const MONTH_RE = '(?<mo>январ|феврал|март|апрел|ма[йя]|июн|июл|август|сентябр|октябр|ноябр|декабр)\\p{L}*';
+  const WD_STEMS = [['воскресень', 0], ['понедельник', 1], ['вторник', 2], ['сред', 3], ['четверг', 4], ['пятниц', 5], ['суббот', 6]];
+  const COLOR_WORDS = [['красн', '#ef4444'], ['оранжев', '#f5a524'], ['желт', '#f5a524'], ['зелен', '#22b07d'], ['бирюзов', '#14b8a6'],
+    ['голуб', '#4f7cff'], ['син', '#4f7cff'], ['фиолетов', '#a855f7'], ['розов', '#ec4899'], ['сер', '#64748b']];
+  const CW = COLOR_WORDS.map(c => c[0]).join('|');
+  const PERIOD = '(?<p>утра|дня|вечера|ночи)';
+
+  function parsePhrase(text) {
+    const orig = text.replace(/\s+/g, ' ').trim();
+    let low = orig.toLowerCase().replace(/ё/g, 'е');
+    const chars = orig.split('');
+    // run a pattern on the lowercase copy; if fn accepts the match, blank it out of the title
+    const take = (src, fn) => {
+      const m = R(src).exec(low);
+      if (!m || fn(m.groups || {}, m) === false) return false;
+      low = low.slice(0, m.index) + ' '.repeat(m[0].length) + low.slice(m.index + m[0].length);
+      for (let k = m.index; k < m.index + m[0].length; k++) chars[k] = ' ';
+      return true;
+    };
+    const T = parse(today());
+    let date = null, time = null, color = null, pod = null;
+    const setDate = ds => { if (date) return false; date = ds; };
+    const setTime = (h, mi, p, guess) => {
+      if (time) return false;
+      p = p || pod;
+      if (p === 'дня' || p === 'вечера') { if (h < 12) h += 12; }
+      else if (p === 'ночи') { if (h === 12) h = 0; else if (h >= 5 && h < 12) h += 12; }
+      else if (p === 'утра') { if (h === 12) h = 0; }
+      else if (guess && h >= 1 && h <= 6) h += 12;     // «в 3» обычно значит 15:00
+      if (h > 23 || mi > 59) return false;
+      time = `${pad(h)}:${pad(mi)}`;
+    };
+    const dayOfMonth = (day, mo, y) => {
+      let year = y || T.getFullYear();
+      let d = new Date(year, mo, day);
+      if (d.getDate() !== day) return false;
+      if (!y && d < T) d = new Date(year + 1, mo, day);
+      return setDate(fmt(d));
+    };
+
+    // colour: «красным цветом», «цвет синий»
+    take(`${B}(?:(?<a>${CW})\\p{L}*\\s+цвет\\p{L}*|цвет\\p{L}*\\s+(?<b>${CW})\\p{L}*)${E}`, g => {
+      color = COLOR_WORDS.find(c => c[0] === (g.a || g.b))[1];
+    });
+    // part of day: «вечером»
+    take(`${B}(утром|днем|вечером|ночью)${E}`, (g, m) => {
+      pod = { утром: 'утра', днем: 'дня', вечером: 'вечера', ночью: 'ночи' }[m[1]];
+    });
+    // «в 12.30» is a time, not a date
+    take(`${B}(?:в|к)\\s+(?<h>\\d{1,2})[:.](?<mi>\\d{2})(?:\\s*${PERIOD})?${E}`, g => setTime(+g.h, +g.mi, g.p, g.h[0] !== '0'));
+
+    // ----- date -----
+    take(`${B}(?:на\\s+)?(сегодня|послепослезавтра|послезавтра|завтра)${E}`, (g, m) =>
+      setDate(addDays(today(), { сегодня: 0, завтра: 1, послезавтра: 2, послепослезавтра: 3 }[m[1]])));
+    take(`${B}через\\s+полчаса${E}`, () => {
+      if (date || time) return false;
+      const d = new Date(Date.now() + 30 * 60000);
+      date = fmt(d); time = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    });
+    take(`${B}через\\s+(?:(?<n>\\d+|${CARD_RE})\\s+)?(?<u>минут\\p{L}*|час\\p{L}*|день|дня|дней|сутки|недел\\p{L}*|месяц\\p{L}*|год|года|лет)${E}`, g => {
+      const n = g.n ? numVal(g.n) : 1;
+      if (g.u.startsWith('минут') || g.u.startsWith('час')) {
+        if (date || time) return false;
+        const d = new Date(Date.now() + n * (g.u.startsWith('час') ? 60 : 1) * 60000);
+        date = fmt(d); time = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        return;
+      }
+      const d = parse(today());
+      if (/^(день|дня|дней|сутки)/.test(g.u)) d.setDate(d.getDate() + n);
+      else if (g.u.startsWith('недел')) d.setDate(d.getDate() + 7 * n);
+      else if (g.u.startsWith('месяц')) d.setMonth(d.getMonth() + n);
+      else d.setFullYear(d.getFullYear() + n);
+      return setDate(fmt(d));
+    });
+    take(`${B}(?:(?:в|во|на|к)\\s+)?(?:(?<nx>следующ\\p{L}*|эт\\p{L}*|ближайш\\p{L}*)\\s+)?(?<w>воскресень\\p{L}*|понедельник\\p{L}*|вторник\\p{L}*|сред[уаы]|четверг\\p{L}*|пятниц\\p{L}*|суббот\\p{L}*)${E}`, g => {
+      const wd = WD_STEMS.find(w => g.w.startsWith(w[0]))[1];
+      let delta = (wd - T.getDay() + 7) % 7;
+      if (delta === 0 && g.nx && g.nx.startsWith('следующ')) delta = 7;
+      return setDate(addDays(today(), delta));
+    });
+    take(`${B}(?:(?:на|к|до)\\s+)?(?:(?<d>\\d{1,2})(?:-?(?:го|е|ое))?|${ORD_RE})\\s+${MONTH_RE}(?:\\s+(?<y>\\d{4})(?:\\s*(?:года|год|г\\.?))?)?${E}`, g =>
+      dayOfMonth(g.d ? +g.d : ordVal(g), MONTH_STEMS.findIndex(st => g.mo.startsWith(st)), g.y && +g.y));
+    take(`${B}(?:(?:на|к|до)\\s+)?(?<d>\\d{1,2})[./](?<mo>\\d{1,2})(?:[./](?<y>\\d{2,4}))?${E}`, g =>
+      dayOfMonth(+g.d, +g.mo - 1, g.y && (g.y.length === 2 ? 2000 + +g.y : +g.y)));
+    take(`${B}(?:(?:на|к|до)\\s+)?(?:(?<d>\\d{1,2})(?:-?го)?|${ORD_RE})\\s+числа${E}`, g => {
+      const day = g.d ? +g.d : ordVal(g);
+      let d = new Date(T.getFullYear(), T.getMonth(), day);
+      if (d < T) d = new Date(T.getFullYear(), T.getMonth() + 1, day);
+      return d.getDate() === day ? setDate(fmt(d)) : false;
+    });
+
+    // ----- time -----
+    const H = `(?<h>\\d{1,2}|${CARD_RE})`;
+    const MIN = `(?:\\s+(?<mi>\\d{1,2})(?:\\s*минут\\p{L}*)?)?`;
+    take(`${B}(?:(?:в|к|на|с)\\s+)?(?<h>\\d{1,2}):(?<mi>\\d{2})(?:\\s*${PERIOD})?${E}`, g => setTime(+g.h, +g.mi, g.p, g.h[0] !== '0'));
+    take(`${B}(?:в\\s+)?половин[еуаы]\\s+${ORD_RE}(?:\\s+${PERIOD})?${E}`, g => setTime((ordVal(g) - 1) || 12, 30, g.p, true));
+    take(`${B}(?:(?:в|к)\\s+)?${H}(?:\\s*час(?:а|ов)?)?${MIN}\\s+${PERIOD}${E}`, g => setTime(numVal(g.h), +(g.mi || 0), g.p, false));
+    take(`${B}(?:в|к)\\s+${H}\\s*(?:час(?:а|ов)?|ч\\.?)${MIN}${E}`, g => setTime(numVal(g.h), +(g.mi || 0), null, g.h[0] !== '0'));
+    take(`${B}(?:в|к)\\s+(полдень|полночь)${E}`, (g, m) => setTime(m[1] === 'полдень' ? 12 : 0, 0, 'утра', false));
+    take(`${B}(?:в|к)\\s+(?<h>\\d{1,2})(?:\\s+(?<mi>\\d{2}))?${E}`, g => setTime(+g.h, +(g.mi || 0), null, g.h[0] !== '0'));
+    if (!time && pod) time = { утра: '09:00', дня: '13:00', вечера: '19:00', ночи: '23:00' }[pod];
+
+    // ----- title: what's left, minus "добавь / напомни мне / надо" and stray prepositions -----
+    let title = chars.join('').replace(/\s+/g, ' ').trim();
+    title = title.replace(R(`^(?:(?:пожалуйста|ну|так)[,\\s]+)*(?:(?:добав|запиш|созда|напомн|постав|запланир)\\p{L}*|нужно|надо)(?:\\s+мне)?(?:\\s+(?:дело|задачу|задача|напоминание))?${E}[\\s,:—-]*`, 'iu'), '');
+    title = title.replace(/\s+([,.!?;:])/g, '$1').replace(/([,;:])(?:\s*[,;:])+/g, '$1');
+    let prev;
+    do {
+      prev = title;
+      title = title.replace(R(`^(?:(?:и|а)${E}|[\\s,.;:!?—-])+`, 'iu'), '')
+                   .replace(R(`(?:\\s(?:в|во|на|к|и|а|с|до)|[\\s,.;:—-])+$`, 'iu'), '');
+    } while (title !== prev);
+    title = title.charAt(0).toUpperCase() + title.slice(1);
+    return { title, date, time, color };
+  }
+
+  // ---------- Voice sheet ----------
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const voice = $('voice'), vText = $('vText');
+  let rec = null;
+  const defaultDate = () => dayDate || today();
+  function dayLabel(ds) {
+    const n = diffDays(today(), ds);
+    if (n === 0) return 'сегодня';
+    if (n === 1) return 'завтра';
+    if (n === 2) return 'послезавтра';
+    const d = parse(ds);
+    return `${WD[d.getDay()].toLowerCase()}, ${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`;
+  }
+  const setVoiceStatus = s => { $('vStatus').textContent = s; };
+
+  function openVoice() {
+    showSheet(voice);
+    vText.value = '';
+    renderVoicePreview();
+    if (SR) startListening();
+    else {
+      setVoiceStatus('Этот браузер не распознаёт речь сам. Нажмите микрофон на клавиатуре и продиктуйте, или напишите текст.');
+      setTimeout(() => vText.focus(), 60);
+    }
+  }
+
+  function startListening() {
+    stopListening();
+    let r;
+    try { r = new SR(); } catch { setVoiceStatus('Не удалось включить распознавание речи — напишите текст.'); return; }
+    rec = r;
+    let heard = false, failed = false;
+    r.lang = 'ru-RU';
+    r.interimResults = true;
+    r.continuous = false;
+    r.maxAlternatives = 1;
+    r.onstart = () => setVoiceStatus('Говорите… Например: «завтра в 10 встреча»');
+    r.onresult = e => {
+      let s = '';
+      for (const res of e.results) { s += res[0].transcript; if (res.isFinal) heard = true; }
+      vText.value = s.trim();
+      renderVoicePreview();
+    };
+    r.onerror = e => {
+      failed = true;
+      setVoiceStatus({
+        'not-allowed': 'Нет доступа к микрофону. Разрешите его в настройках браузера или напишите текст.',
+        'service-not-allowed': 'Распознавание речи недоступно. Нажмите микрофон на клавиатуре или напишите текст.',
+        'no-speech': 'Ничего не слышно. Нажмите на микрофон и скажите ещё раз.',
+        'audio-capture': 'Микрофон не найден — напишите текст.',
+        'network': 'Для распознавания речи нужен интернет. Можно написать текст.'
+      }[e.error] || 'Не получилось распознать. Нажмите на микрофон ещё раз.');
+    };
+    r.onend = () => {
+      if (rec !== r) return;
+      rec = null;
+      $('micBig').classList.remove('on');
+      if (!voice.classList.contains('on')) return;
+      if (heard && vText.value.trim()) commitVoice();
+      else if (!failed) setVoiceStatus('Нажмите на микрофон, чтобы сказать ещё раз.');
+    };
+    try {
+      r.start();
+      $('micBig').classList.add('on');
+      setVoiceStatus('Слушаю…');
+    } catch {
+      rec = null;
+      setVoiceStatus('Не удалось включить микрофон — напишите текст.');
+    }
+  }
+  function stopListening() {
+    if (!rec) return;
+    const r = rec;
+    rec = null;
+    try { r.abort(); } catch { /* already stopped */ }
+    $('micBig').classList.remove('on');
+  }
+
+  function renderVoicePreview() {
+    const s = vText.value.trim();
+    if (!s) { $('vPrev').innerHTML = ''; return; }
+    const p = parsePhrase(s);
+    $('vPrev').innerHTML =
+      `<span class="chip">📅 ${dayLabel(p.date || defaultDate())}</span>` +
+      (p.time ? `<span class="chip">🕒 ${p.time}</span>` : '') +
+      `<span class="chip"><i class="dot" style="background:${p.color || settings.color}"></i>${p.title ? esc(p.title) : '<span style="color:var(--muted)">без названия</span>'}</span>`;
+  }
+
+  function commitVoice() {
+    const p = parsePhrase(vText.value);
+    if (!p.title) {
+      setVoiceStatus('Не понял, что за дело — допишите название.');
+      vText.focus();
+      return;
+    }
+    const t = {
+      id: uid(), created: Date.now(), title: p.title, note: '',
+      date: p.date || defaultDate(), time: p.time || '', color: p.color || settings.color, done: false
+    };
+    tasks.push(t);
+    saveTasks();
+    closeSheets();
+    rerender();
+    revealTask(t);
+    toastAction(`Добавлено: ${esc(t.title)} — ${dayLabel(t.date)}${t.time ? ', ' + t.time : ''}`, 'Изменить', () => openEditor(t.id), 5000);
+  }
+
+  function revealTask(t) {
+    if (dayDate) {
+      if (t.date !== dayDate) return;
+      if (t.time) scrollToHour(parseInt(t.time, 10));
+    } else {
+      scrollIntoViewIfHidden(t.date);
+    }
+    const el = document.querySelector(`${dayDate ? '#hours' : '#timeline'} .task[data-id="${t.id}"]`);
+    if (el) {
+      el.scrollIntoView({ block: 'nearest' });
+      el.classList.add('flash');
+    }
+  }
+
+  $('micBtn').onclick = openVoice;
+  $('micDay').onclick = openVoice;
+  $('micBig').onclick = () => {
+    if (!SR) { vText.focus(); return; }
+    if (rec) rec.stop();       // finish now; onend adds the task
+    else startListening();
+  };
+  vText.addEventListener('input', () => { stopListening(); renderVoicePreview(); });
+  vText.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commitVoice(); } });
+  $('vAdd').onclick = () => { stopListening(); commitVoice(); };
+  $('vCancel').onclick = closeSheets;
 
   // ---------- Global buttons ----------
   $('todayBtn').onclick = () => scrollToDate(today(), true);

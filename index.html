@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f4f5f9" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#15171d" media="(prefers-color-scheme: dark)">
@@ -541,9 +542,25 @@
     get(k, def) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch { return def; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { toast('Не удалось сохранить в память браузера'); } }
   };
+  // every task passes through here (storage and backup files), so nothing unchecked reaches the HTML
+  const cleanTask = t => {
+    if (!t || typeof t !== 'object' || !t.title || !/^\d{4}-\d{2}-\d{2}$/.test(t.date)) return null;
+    const id = String(t.id || '').replace(/[^\w-]/g, '');
+    if (!id) return null;
+    const c = {
+      id, title: String(t.title).slice(0, 500), note: String(t.note || '').slice(0, 5000), date: t.date,
+      time: /^([01]\d|2[0-3]):[0-5]\d$/.test(t.time) ? t.time : '',
+      dur: Math.min(Math.max(Math.round(+t.dur) || 0, 0), 1440),
+      color: /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(t.color) ? t.color : '#4f7cff',
+      done: !!t.done, created: Number(t.created) || Date.now()
+    };
+    if (Number.isFinite(+t.order) && t.order !== null && t.order !== '') c.order = +t.order;
+    return c;
+  };
   let tasks = store.get(KEY, []);
-  if (!Array.isArray(tasks)) tasks = [];
+  tasks = Array.isArray(tasks) ? tasks.map(cleanTask).filter(Boolean) : [];
   const settings = Object.assign({ w: 'm', color: '#4f7cff' }, store.get(SKEY, {}));
+  if (!/^#[0-9a-f]{6}$/i.test(settings.color)) settings.color = '#4f7cff';
   const saveTasks = () => store.set(KEY, tasks);
   const saveSettings = () => store.set(SKEY, settings);
 
@@ -1292,14 +1309,13 @@
       const data = JSON.parse(await f.text());
       const list = Array.isArray(data) ? data : data.tasks;
       if (!Array.isArray(list)) throw new Error();
-      const valid = list.filter(t => t && t.id && t.title && /^\d{4}-\d{2}-\d{2}$/.test(t.date));
+      const valid = list.map(cleanTask).filter(Boolean);
       const replace = confirm(`В файле ${valid.length} дел.\n\nОК — заменить текущие дела.\nОтмена — добавить к текущим.`);
       if (replace) tasks = valid;
       else {
         const ids = new Set(tasks.map(t => t.id));
         tasks = tasks.concat(valid.filter(t => !ids.has(t.id)));
       }
-      tasks.forEach(t => { t.color = t.color || COLORS[0]; t.created = t.created || Date.now(); t.time = t.time || ''; });
       saveTasks();
       closeSheets();
       rerender();

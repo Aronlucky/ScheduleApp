@@ -150,6 +150,7 @@
     box-shadow: var(--shadow);
     cursor: pointer;
     overflow-wrap: break-word;
+    hyphens: auto; -webkit-hyphens: auto;
     position: relative;
   }
   @media (prefers-color-scheme: dark) { .task { background: var(--cbd); } }
@@ -226,6 +227,70 @@
   }
   .col.allday .chead .dn { font-size: 14px; }
   .col.allday .chead .hint-s { display: block; font-size: 11px; color: var(--muted); font-weight: 500; }
+  .col.allday { transition: flex-basis .18s, width .18s; }
+  .chead .fold { margin-left: auto; color: var(--muted); font-size: 18px; line-height: 1; padding-left: 6px; }
+  .chead .cnt + .fold { margin-left: 0; }
+  .col.allday.collapsed { flex-basis: 44px; width: 44px; }
+  .col.allday.collapsed .list, .col.allday.collapsed .hint-s { display: none; }
+  .col.allday.collapsed .chead { flex: 1; flex-direction: column; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 0; }
+  .col.allday.collapsed .chead .dn { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 13px; }
+  .col.allday.collapsed .fold { order: -2; margin: 0; padding: 0; }
+  .col.allday.collapsed .cnt { order: -1; margin: 0; background: var(--accent); color: #fff; border-radius: 999px; padding: 1px 7px; }
+
+  /* ---------- Hour scale (day view) ---------- */
+  .tl { flex: 0 0 auto; display: flex; flex-direction: column; min-height: 0; }
+  .tl-head { flex: 0 0 auto; position: relative; height: 42px; border-bottom: 1px solid var(--line); }
+  .tl-h {
+    position: absolute; top: 0; bottom: 0;
+    padding: 11px 0 0 7px; border-left: 1px solid var(--line);
+    font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums;
+  }
+  .tl-h.now { color: var(--accent); }
+  .tl-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; }
+  .tl-canvas {
+    position: relative; min-height: 100%;
+    background-image:
+      repeating-linear-gradient(to right, var(--line) 0 1px, transparent 1px var(--hourw)),
+      repeating-linear-gradient(to right, transparent 0 calc(var(--hourw) / 2), var(--half) calc(var(--hourw) / 2) calc(var(--hourw) / 2 + 1px), transparent calc(var(--hourw) / 2 + 1px) var(--hourw));
+    --half: rgba(120, 128, 150, .14);
+  }
+  .tl-night { position: absolute; top: 0; bottom: 0; background: rgba(110, 120, 150, .07); pointer-events: none; }
+  .now-line { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--danger); pointer-events: none; z-index: 2; }
+  .now-line::before { content: ""; position: absolute; top: 0; left: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--danger); }
+  .bar {
+    position: absolute; height: 58px; z-index: 1;
+    padding: 5px 16px 5px 6px; gap: 6px; overflow: hidden;
+  }
+  .bar .chk { width: 18px; height: 18px; }
+  .bar .tbody { min-width: 0; }
+  .bar .ttime { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar .ttitle {
+    font-size: 13.5px; line-height: 1.25;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .bar.open { border-right: 2px dashed var(--c); }
+  .bar.narrow { padding-left: 5px; padding-right: 12px; }
+  .bar.narrow .chk, .bar.narrow .ttime { display: none; }
+  .bar.narrow .ttitle { -webkit-line-clamp: 3; font-size: 12.5px; }
+  .rz {
+    position: absolute; top: 0; right: 0; bottom: 0; width: 16px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: ew-resize; touch-action: none;
+  }
+  .rz::after { content: ""; width: 4px; height: 20px; border-left: 2px solid var(--c); border-right: 2px solid var(--c); opacity: .55; }
+  .bar.narrow .rz { width: 12px; }
+  .task.resizing { box-shadow: 0 0 0 2px var(--c), var(--shadow); z-index: 3; }
+  body.resizing, body.resizing * { cursor: ew-resize !important; user-select: none; }
+  .drop-slot {
+    position: absolute; top: 0; bottom: 0; z-index: 0; pointer-events: none;
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    border-left: 2px solid var(--accent);
+  }
+  .drop-slot span {
+    position: absolute; top: 4px; left: 4px;
+    background: var(--accent); color: #fff; font-size: 12px; font-weight: 700;
+    border-radius: 6px; padding: 1px 6px; white-space: nowrap;
+  }
 
   /* ---------- Drag & drop ---------- */
   .task { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
@@ -277,6 +342,15 @@
   .row > .field { flex: 1; min-width: 0; }
   .timewrap { display: flex; gap: 6px; }
   .timewrap .inp { flex: 1; min-width: 0; }
+  .durs { display: flex; flex-wrap: wrap; gap: 6px; }
+  .durs button {
+    padding: 6px 11px; border-radius: 999px; font-size: 13px; font-weight: 600;
+    background: var(--bg); border: 1px solid var(--line);
+  }
+  .durs button.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .endrow { display: flex; align-items: center; gap: 8px; margin-top: 8px; color: var(--muted); font-size: 14px; }
+  .endrow .inp { flex: 0 1 150px; }
+  .endrow .inp:disabled { opacity: .5; }
   .clr { flex: 0 0 auto; width: 40px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); color: var(--muted); }
   .swatches { display: flex; flex-wrap: wrap; gap: 8px; }
   .sw {
@@ -367,6 +441,11 @@
         <button type="button" class="clr" id="clrTime" aria-label="Без времени">✕</button>
       </div>
     </div>
+  </div>
+  <div class="field">
+    <label>Длительность</label>
+    <div class="durs" id="durs"></div>
+    <div class="endrow">до <input class="inp" id="fEnd" type="time"> <span id="durTxt"></span></div>
   </div>
   <div class="field">
     <label>Цвет</label>
@@ -491,13 +570,20 @@
     toast.t = setTimeout(() => el.classList.remove('on'), 2200);
   }
 
+  // ---------- Time & duration helpers ----------
+  const DAY_MIN = 1440;
+  const toMin = s => { const [h, m] = s.split(':').map(Number); return h * 60 + m; };
+  const fromMin = m => m >= DAY_MIN ? '24:00' : `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
+  const durLabel = m => m < 60 ? `${m} мин` : m % 60 ? `${Math.floor(m / 60)} ч ${m % 60} мин` : `${m / 60} ч`;
+  const timeLabel = t => !t.time ? '' : t.dur ? `${t.time}–${fromMin(Math.min(toMin(t.time) + t.dur, DAY_MIN))}` : t.time;
+
   // ---------- Task card ----------
   function card(t) {
     const style = `--c:${t.color};--cb:${rgba(t.color, .14)};--cbd:${rgba(t.color, .2)}`;
     return `<div class="task${t.done ? ' done' : ''}" data-act="edit" data-id="${t.id}" style="${style}">
       <button class="chk" data-act="toggle" aria-label="Выполнено"></button>
       <div class="tbody">
-        ${t.time ? `<div class="ttime">${t.time}</div>` : ''}
+        ${t.time ? `<div class="ttime">${timeLabel(t)}</div>` : ''}
         <div class="ttitle">${esc(t.title)}</div>
         ${t.note ? `<div class="tnote">${esc(t.note)}</div>` : ''}
       </div>
@@ -611,20 +697,25 @@
   const hoursEl = $('hours');
   let dayDate = null;
 
-  function hourColumn(key, label, list, isNow) {
-    const cls = ['col'];
-    if (key === 'none') cls.push('allday');
-    if (isNow) cls.push('now');
-    return `<section class="${cls.join(' ')}" data-hour="${key}">
-      <div class="chead">
-        <span class="dn">${label}${key === 'none' ? '<span class="hint-s">тяните на час →</span>' : ''}</span>
-        ${list.length ? `<span class="cnt">${list.length}</span>` : ''}
-      </div>
-      <div class="list" data-act="add-empty">
-        ${list.map(card).join('')}
-        <button class="add" data-act="add">+ Добавить</button>
-      </div>
-    </section>`;
+  // the day is a horizontal scale: tasks are bars from start to end, stacked in lanes when they overlap
+  const LANE = 66;
+  const HOURW = { s: 90, m: 140, l: 200 };
+  const hourW = () => HOURW[settings.w] || 140;
+  const barWidth = (t, hw) => Math.max(t.dur ? t.dur / 60 * hw : hw * 0.9, 30);
+
+  function bar(t, lane, hw) {
+    const w = barWidth(t, hw);
+    const cls = ['task', 'bar'];
+    if (t.done) cls.push('done');
+    if (!t.dur) cls.push('open');
+    if (w < 96) cls.push('narrow');
+    const style = `--c:${t.color};--cb:${rgba(t.color, .16)};--cbd:${rgba(t.color, .24)};` +
+      `left:${toMin(t.time) / 60 * hw}px;width:${w}px;top:${10 + lane * LANE}px`;
+    return `<div class="${cls.join(' ')}" data-act="edit" data-id="${t.id}" style="${style}" title="${esc(t.title)}">
+      <button class="chk" data-act="toggle" aria-label="Выполнено"></button>
+      <div class="tbody"><div class="ttime">${timeLabel(t)}</div><div class="ttitle">${esc(t.title)}</div></div>
+      <div class="rz" data-act="resize" title="Потяните, чтобы изменить длительность"></div>
+    </div>`;
   }
 
   function renderDay() {
@@ -633,16 +724,51 @@
     const isToday = dayDate === today();
     $('dayTitle').innerHTML = `${d.getDate()} ${MONTHS_GEN[d.getMonth()]}<small>${isToday ? 'сегодня, ' : ''}${WD_FULL[d.getDay()]}</small>`;
     const list = tasks.filter(t => t.date === dayDate).sort(byOrder);
-    const byHour = Array.from({ length: 24 }, () => []);
-    const none = [];
-    for (const t of list) t.time ? byHour[parseInt(t.time, 10)].push(t) : none.push(t);
-    const nowH = new Date().getHours();
-    let html = hourColumn('none', 'Без времени', none, false);
-    for (let h = 0; h < 24; h++) html += hourColumn(h, `${pad(h)}:00`, byHour[h], isToday && h === nowH);
-    const scrolls = {};
-    hoursEl.querySelectorAll('.col').forEach(c => { scrolls[c.dataset.hour] = c.querySelector('.list').scrollTop; });
-    hoursEl.innerHTML = html;
-    hoursEl.querySelectorAll('.col').forEach(c => { if (scrolls[c.dataset.hour]) c.querySelector('.list').scrollTop = scrolls[c.dataset.hour]; });
+    const none = list.filter(t => !t.time);
+    const timed = list.filter(t => t.time).sort((a, b) => toMin(a.time) - toMin(b.time) || (b.dur || 0) - (a.dur || 0));
+    const hw = hourW();
+    const laneEnds = [];
+    const bars = timed.map(t => {
+      const x0 = toMin(t.time) / 60 * hw;
+      let lane = laneEnds.findIndex(e => e <= x0);
+      if (lane < 0) lane = laneEnds.length;
+      laneEnds[lane] = x0 + barWidth(t, hw) + 4;
+      return bar(t, lane, hw);
+    }).join('');
+    const now = new Date();
+    let head = '';
+    for (let h = 0; h < 24; h++) head += `<div class="tl-h${isToday && h === now.getHours() ? ' now' : ''}" style="left:${h * hw}px;width:${hw}px">${pad(h)}:00</div>`;
+    const collapsed = !!settings.alldayCollapsed;
+
+    const sl = hoursEl.scrollLeft;
+    const body = hoursEl.querySelector('.tl-body'), st = body ? body.scrollTop : 0;
+    const side = hoursEl.querySelector('.allday .list'), lt = side ? side.scrollTop : 0;
+    hoursEl.innerHTML = `
+      <section class="col allday${collapsed ? ' collapsed' : ''}" data-hour="none">
+        <button class="chead" data-act="toggle-allday" aria-label="${collapsed ? 'Развернуть' : 'Свернуть'} «Без времени»">
+          <span class="dn">Без времени<span class="hint-s">тяните на шкалу →</span></span>
+          ${none.length ? `<span class="cnt">${none.length}</span>` : ''}
+          <span class="fold">${collapsed ? '›' : '‹'}</span>
+        </button>
+        <div class="list" data-act="add-empty">
+          ${none.map(card).join('')}
+          <button class="add" data-act="add">+ Добавить</button>
+        </div>
+      </section>
+      <div class="tl" style="width:${24 * hw}px;--hourw:${hw}px">
+        <div class="tl-head">${head}</div>
+        <div class="tl-body">
+          <div class="tl-canvas" data-act="add-at" style="height:${laneEnds.length * LANE + 90}px">
+            <div class="tl-night" style="left:0;width:${7 * hw}px"></div>
+            <div class="tl-night" style="left:${22 * hw}px;width:${2 * hw}px"></div>
+            ${isToday ? `<div class="now-line" style="left:${(now.getHours() * 60 + now.getMinutes()) / 60 * hw}px"></div>` : ''}
+            ${bars}
+          </div>
+        </div>
+      </div>`;
+    hoursEl.scrollLeft = sl;
+    hoursEl.querySelector('.tl-body').scrollTop = st;
+    hoursEl.querySelector('.allday .list').scrollTop = lt;
     remarkDragged(hoursEl);
   }
 
@@ -655,8 +781,8 @@
     scrollToHour(h);
   }
   function scrollToHour(h) {
-    const col = hoursEl.querySelector(`.col[data-hour="${h}"]`);
-    if (col) hoursEl.scrollLeft = Math.max(0, col.offsetLeft - col.offsetWidth * 0.25);
+    // the scale starts right after the pinned panel, so hour h sits at h * hourW in scroll space
+    hoursEl.scrollLeft = Math.max(0, (h - 0.3) * hourW());
   }
 
   function openDay(ds, push) {
@@ -689,12 +815,21 @@
   hoursEl.addEventListener('click', e => {
     const el = e.target.closest('[data-act]');
     if (!el) return;
-    const col = el.closest('.col');
-    const hour = col && col.dataset.hour;
-    const time = hour && hour !== 'none' ? `${pad(hour)}:00` : '';
     switch (el.dataset.act) {
-      case 'add': openEditor(null, { date: dayDate, time }); break;
-      case 'add-empty': if (e.target === el) openEditor(null, { date: dayDate, time }); break;
+      case 'toggle-allday':
+        settings.alldayCollapsed = !settings.alldayCollapsed;
+        saveSettings();
+        renderDay();
+        break;
+      case 'add-at': {
+        if (e.target !== el) break;
+        const m = Math.floor((e.clientX - el.getBoundingClientRect().left) / hourW() * 2) * 30;
+        openEditor(null, { date: dayDate, time: fromMin(Math.min(Math.max(m, 0), DAY_MIN - 30)), dur: 60 });
+        break;
+      }
+      case 'resize': break;
+      case 'add': openEditor(null, { date: dayDate }); break;
+      case 'add-empty': if (e.target === el) openEditor(null, { date: dayDate }); break;
       case 'toggle': e.stopPropagation(); toggleDone(el.closest('.task').dataset.id); break;
       case 'edit': openEditor(el.dataset.id); break;
     }
@@ -708,6 +843,19 @@
   document.addEventListener('pointerdown', e => {
     const el = e.target.closest('.strip .task');
     if (!el || e.button > 0) return;
+    if (e.target.closest('.rz')) {
+      // right edge of a bar: stretch it to change the duration
+      const t = taskById(el.dataset.id);
+      drag = {
+        mode: 'resize', id: t.id, el, strip: hoursEl, pointerId: e.pointerId, active: true,
+        touch: e.pointerType !== 'mouse', x: e.clientX, y: e.clientY, startMin: toMin(t.time), dur: t.dur || 60
+      };
+      el.classList.add('resizing');
+      document.body.classList.add('resizing');
+      e.preventDefault();
+      requestAnimationFrame(dragLoop);
+      return;
+    }
     drag = {
       id: el.dataset.id, el, strip: el.closest('.strip'), pointerId: e.pointerId,
       touch: e.pointerType !== 'mouse', active: false,
@@ -727,13 +875,15 @@
       return;
     }
     e.preventDefault();
-    moveGhost();
+    if (drag.mode === 'resize') updateResize();
+    else moveGhost();
   });
 
   document.addEventListener('pointerup', e => {
     if (!drag || e.pointerId !== drag.pointerId) return;
     if (drag.active) {
-      dropTask();
+      if (drag.mode === 'resize') finishResize();
+      else dropTask();
       suppressClick = true;
       setTimeout(() => { suppressClick = false; }, 0);
     }
@@ -763,6 +913,8 @@
     const g = drag.el.cloneNode(true);
     g.classList.add('ghost');
     g.style.width = r.width + 'px';
+    g.style.height = r.height + 'px';
+    g.style.left = g.style.top = '0';
     document.body.appendChild(g);
     drag.ghost = g;
     drag.el.classList.add('dragging');
@@ -781,14 +933,32 @@
     clearTimeout(drag.timer);
     if (drag.ghost) drag.ghost.remove();
     clearDropMarks();
-    document.querySelectorAll('.task.dragging').forEach(el => el.classList.remove('dragging'));
-    document.body.classList.remove('dragging-on');
+    document.querySelectorAll('.task.dragging, .task.resizing').forEach(el => el.classList.remove('dragging', 'resizing'));
+    document.body.classList.remove('dragging-on', 'resizing');
     drag = null;
   }
 
   function clearDropMarks() {
     document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
-    document.querySelectorAll('.drop-line').forEach(el => el.remove());
+    document.querySelectorAll('.drop-line, .drop-slot').forEach(el => el.remove());
+  }
+
+  function updateResize() {
+    const canvas = drag.el.parentElement;
+    if (!canvas) return;
+    const hw = hourW();
+    const m = (drag.x - canvas.getBoundingClientRect().left) / hw * 60;
+    drag.dur = Math.min(Math.max(Math.round((m - drag.startMin) / 15) * 15, 15), DAY_MIN - drag.startMin);
+    drag.el.style.width = Math.max(drag.dur / 60 * hw, 30) + 'px';
+    drag.el.classList.remove('open');
+    drag.el.querySelector('.ttime').textContent = `${fromMin(drag.startMin)}–${fromMin(drag.startMin + drag.dur)} · ${durLabel(drag.dur)}`;
+  }
+  function finishResize() {
+    const t = taskById(drag.id);
+    if (!t || t.dur === drag.dur) { renderDay(); return; }
+    t.dur = drag.dur;
+    saveTasks();
+    rerender();
   }
 
   // auto-scroll near the edges + recompute the drop target every frame
@@ -803,7 +973,9 @@
     }
     if (drag.x >= left && drag.x < left + leftEdge) s.scrollLeft -= 4 + 14 * (1 - (drag.x - left) / leftEdge);
     else if (drag.x > r.right - edge) s.scrollLeft += 4 + 14 * (1 - (r.right - drag.x) / edge);
-    const list = drag.target && drag.target.el.querySelector && drag.target.el.querySelector('.list');
+    if (drag.mode === 'resize') { updateResize(); requestAnimationFrame(dragLoop); return; }
+    const tg = drag.target;
+    const list = tg && (tg.kind === 'time' ? tg.el.parentElement : tg.el.querySelector && tg.el.querySelector('.list'));
     if (list) {
       const lr = list.getBoundingClientRect();
       if (drag.y < lr.top + 40) list.scrollTop -= 8;
@@ -818,8 +990,13 @@
     const under = document.elementFromPoint(drag.x, drag.y);
     let target = null;
     const btn = under && under.closest('#prevDay, #nextDay');
+    const canvas = under && under.closest('.tl-canvas');
     if (btn && dayDate) {
       target = { kind: btn.id === 'prevDay' ? 'prev' : 'next', el: btn };
+    } else if (canvas) {
+      // the left edge of the dragged card marks the new start time, snapped to 15 minutes
+      const m = Math.round((drag.x - drag.dx - canvas.getBoundingClientRect().left) / hourW() * 4) * 15;
+      target = { kind: 'time', el: canvas, key: Math.min(Math.max(m, 0), DAY_MIN - 15) };
     } else {
       const col = under && under.closest('.col');
       if (col && col.closest('.strip') === drag.strip) {
@@ -846,6 +1023,15 @@
     drag.target = target;
     clearDropMarks();
     if (!target) return;
+    if (target.kind === 'time') {
+      const hw = hourW(), slot = document.createElement('div');
+      slot.className = 'drop-slot';
+      slot.style.left = target.key / 60 * hw + 'px';
+      slot.style.width = Math.max((t.dur || 60) / 60 * hw, 30) + 'px';
+      slot.innerHTML = `<span>${fromMin(target.key)}${t.dur ? '–' + fromMin(Math.min(target.key + t.dur, DAY_MIN)) : ''}</span>`;
+      target.el.appendChild(slot);
+      return;
+    }
     target.el.classList.add('drop-target');
     if (willBeUntimed) {
       const ln = document.createElement('div');
@@ -865,8 +1051,10 @@
       toast(`Перенесено на ${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`);
     } else if (tg.kind === 'date') {
       t.date = tg.key;
+    } else if (tg.kind === 'time') {
+      t.time = fromMin(tg.key);
     } else if (tg.kind === 'hour') {
-      t.time = tg.key === 'none' ? '' : `${pad(tg.key)}:${t.time ? t.time.slice(3) : '00'}`;
+      t.time = '';
     }
     if (tg.order != null) t.order = tg.order;
     if (JSON.stringify(t) === before) return;
@@ -892,6 +1080,29 @@
   const backdrop = $('backdrop');
   let editingId = null;
   let pickedColor = settings.color;
+  let pickedDur = 0;
+  const DURS = [[0, 'Нет'], [15, '15 мин'], [30, '30 мин'], [45, '45 мин'], [60, '1 ч'], [90, '1,5 ч'], [120, '2 ч'], [180, '3 ч']];
+
+  function renderDurs(keepEnd) {
+    $('durs').innerHTML = DURS.map(([m, l]) => `<button type="button" data-dur="${m}" class="${m === pickedDur ? 'on' : ''}">${l}</button>`).join('');
+    const time = $('fTime').value;
+    $('fEnd').disabled = !time;
+    if (!keepEnd) $('fEnd').value = time && pickedDur ? fromMin(Math.min(toMin(time) + pickedDur, DAY_MIN - 1)) : '';
+    $('durTxt').textContent = !time ? 'сначала укажите время' : pickedDur && !DURS.some(d => d[0] === pickedDur) ? durLabel(pickedDur) : '';
+  }
+  $('durs').addEventListener('click', e => {
+    const b = e.target.closest('[data-dur]');
+    if (!b) return;
+    pickedDur = +b.dataset.dur;
+    renderDurs();
+  });
+  $('fEnd').addEventListener('input', () => {
+    const time = $('fTime').value, end = $('fEnd').value;
+    if (!time || !end) return;
+    const d = toMin(end) - toMin(time);
+    if (d > 0) { pickedDur = d; renderDurs(true); }
+  });
+  $('fTime').addEventListener('input', () => renderDurs());
 
   function renderSwatches() {
     const isCustom = !COLORS.includes(pickedColor);
@@ -922,6 +1133,8 @@
     $('fNote').value = t ? (t.note || '') : '';
     $('fDate').value = t ? t.date : (preset.date || today());
     $('fTime').value = t ? (t.time || '') : (preset.time || '');
+    pickedDur = t ? (t.dur || 0) : (preset.dur || 0);
+    renderDurs();
     $('fDone').checked = t ? !!t.done : false;
     $('doneRow').classList.toggle('hidden', !t);
     $('delBtn').classList.toggle('hidden', !t);
@@ -941,6 +1154,7 @@
       note: $('fNote').value.trim(),
       date,
       time: $('fTime').value || '',
+      dur: pickedDur,
       color: pickedColor,
       done: $('fDone').checked
     };
@@ -987,7 +1201,7 @@
   }
 
   $('cancelBtn').onclick = closeSheets;
-  $('clrTime').onclick = () => { $('fTime').value = ''; };
+  $('clrTime').onclick = () => { $('fTime').value = ''; renderDurs(); };
 
   function showSheet(el) {
     closeSheets();
@@ -1024,6 +1238,7 @@
     applyWidth();
     scrollToDate(keep, false);
     timeline.scrollLeft = diffDays(rangeStart, keep) * colWidth();
+    if (dayDate) renderDay();
   };
 
   $('exportBtn').onclick = () => {
@@ -1182,6 +1397,27 @@
       return d.getDate() === day ? setDate(fmt(d)) : false;
     });
 
+    // ----- duration: «с 10 до 12», «на 2 часа», «на полчаса» -----
+    let dur = null;
+    const HM = n => `(?<${n}h>\\d{1,2}|${CARD_RE})(?::(?<${n}m>\\d{2}))?(?:\\s*час(?:а|ов)?)?`;
+    take(`${B}(?:с|со)\\s+${HM('a')}\\s+до\\s+${HM('b')}(?:\\s+${PERIOD})?${E}`, g => {
+      if (setTime(numVal(g.ah), +(g.am || 0), g.p, g.ah[0] !== '0') === false) return false;
+      const st = toMin(time);
+      let en = numVal(g.bh) * 60 + +(g.bm || 0);
+      if (en <= st) en += 720;          // «с 3 до 5» → 15:00–17:00
+      if (en <= st) en += 720;
+      if (en <= DAY_MIN) dur = en - st;
+    });
+    take(`${B}на\\s+(?<h>\\d+)\\s*час(?:а|ов)?\\s+(?<m>\\d+)\\s*мин\\p{L}*${E}`, g => { dur = +g.h * 60 + +g.m; });
+    take(`${B}на\\s+полчаса${E}`, () => { if (dur) return false; dur = 30; });
+    take(`${B}на\\s+(?:(?<n>\\d+(?:[.,]\\d+)?|${CARD_RE}|полтора|полторы)\\s+)?(?<u>час(?:а|ов)?|минут\\p{L}*|мин)${E}`, g => {
+      if (dur) return false;
+      const n = !g.n ? 1 : g.n.startsWith('полтор') ? 1.5 : /\d/.test(g.n) ? parseFloat(g.n.replace(',', '.')) : numVal(g.n);
+      const m = Math.round(g.u.startsWith('час') ? n * 60 : n);
+      if (!(m > 0 && m <= DAY_MIN)) return false;
+      dur = m;
+    });
+
     // ----- time -----
     const H = `(?<h>\\d{1,2}|${CARD_RE})`;
     const MIN = `(?:\\s+(?<mi>\\d{1,2})(?:\\s*минут\\p{L}*)?)?`;
@@ -1204,7 +1440,7 @@
                    .replace(R(`(?:\\s(?:в|во|на|к|и|а|с|до)|[\\s,.;:—-])+$`, 'iu'), '');
     } while (title !== prev);
     title = title.charAt(0).toUpperCase() + title.slice(1);
-    return { title, date, time, color };
+    return { title, date, time, color, dur: time ? dur : null };
   }
 
   // ---------- Voice sheet ----------
@@ -1291,7 +1527,7 @@
     const p = parsePhrase(s);
     $('vPrev').innerHTML =
       `<span class="chip">📅 ${dayLabel(p.date || defaultDate())}</span>` +
-      (p.time ? `<span class="chip">🕒 ${p.time}</span>` : '') +
+      (p.time ? `<span class="chip">🕒 ${timeLabel({ time: p.time, dur: p.dur })}</span>` : '') +
       `<span class="chip"><i class="dot" style="background:${p.color || settings.color}"></i>${p.title ? esc(p.title) : '<span style="color:var(--muted)">без названия</span>'}</span>`;
   }
 
@@ -1304,14 +1540,14 @@
     }
     const t = {
       id: uid(), created: Date.now(), title: p.title, note: '',
-      date: p.date || defaultDate(), time: p.time || '', color: p.color || settings.color, done: false
+      date: p.date || defaultDate(), time: p.time || '', dur: p.dur || 0, color: p.color || settings.color, done: false
     };
     tasks.push(t);
     saveTasks();
     closeSheets();
     rerender();
     revealTask(t);
-    toastAction(`Добавлено: ${esc(t.title)} — ${dayLabel(t.date)}${t.time ? ', ' + t.time : ''}`, 'Изменить', () => openEditor(t.id), 5000);
+    toastAction(`Добавлено: ${esc(t.title)} — ${dayLabel(t.date)}${t.time ? ', ' + timeLabel(t) : ''}`, 'Изменить', () => openEditor(t.id), 5000);
   }
 
   function revealTask(t) {
@@ -1346,14 +1582,14 @@
   $('fabDay').onclick = () => {
     let time = '';
     if (dayDate === today()) time = `${pad(Math.min(23, new Date().getHours() + 1))}:00`;
-    openEditor(null, { date: dayDate, time });
+    openEditor(null, { date: dayDate, time, dur: time ? 60 : 0 });
   };
 
   // Refresh "today" highlight when the date changes while the app stays open
   let lastToday = today();
   setInterval(() => {
     if (today() !== lastToday) { lastToday = today(); rerender(); }
-    else if (dayDate === today()) renderDay();
+    else if (dayDate === today() && !drag) renderDay();   // move the "now" line
   }, 60000);
 
   // ---------- Start ----------

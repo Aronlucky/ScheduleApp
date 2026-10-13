@@ -403,6 +403,48 @@
   .nojs h2 { margin: 0 0 10px; font-size: 19px; }
   .nojs ol { padding-left: 20px; margin: 10px 0 0; }
   .nojs li { margin-bottom: 6px; }
+  /* ---------- Accounts ---------- */
+  .acc-btn { position: relative; }
+  .sync-dot { position: absolute; right: 5px; top: 5px; width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--panel); background: var(--muted); }
+  .sync-dot.local { display: none; }
+  .sync-dot.ok { background: #22b07d; }
+  .sync-dot.busy { background: #f5a524; }
+  .sync-dot.warn { background: var(--danger); }
+  .topbar .title small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .acc-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 6px; border-bottom: 1px solid var(--line); cursor: pointer;
+  }
+  .acc-row.on .acc-main b { color: var(--accent); }
+  .acc-ico { width: 28px; text-align: center; font-size: 20px; }
+  .acc-main { flex: 1; min-width: 0; }
+  .acc-main b { display: block; }
+  .acc-main small { display: block; color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .acc-check { width: 18px; color: var(--accent); font-weight: 700; }
+  .acc-more { width: 34px; height: 34px; border-radius: 10px; background: var(--bg); font-size: 18px; }
+  .acc-actions { display: flex; gap: 8px; padding: 8px 6px 12px 46px; border-bottom: 1px solid var(--line); }
+  .acc-actions button { padding: 8px 12px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); font-size: 13px; font-weight: 600; }
+  .acc-actions .danger { color: var(--danger); }
+  .acc-form { padding-top: 10px; }
+  .inp.mono { font-family: ui-monospace, Menlo, Consolas, monospace; letter-spacing: .04em; }
+  .acc-msg { min-height: 20px; font-size: 13.5px; color: var(--danger); margin-bottom: 6px; }
+
+  /* ---------- Notes ---------- */
+  .notes-main { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 12px calc(30px + var(--safe-b)); max-width: 720px; width: 100%; margin: 0 auto; }
+  .note-add { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 10px; }
+  .note-add .inp { flex: 1; resize: none; min-height: 46px; max-height: 40vh; }
+  .note-add .btn { flex: 0 0 auto; padding: 0 16px; }
+  .note-search { margin-bottom: 12px; }
+  .notes-list { display: flex; flex-direction: column; gap: 8px; }
+  .note {
+    background: var(--card); border-radius: 12px; padding: 12px 14px; box-shadow: var(--shadow);
+    cursor: pointer; overflow-wrap: break-word; hyphens: auto; -webkit-hyphens: auto;
+  }
+  .note .ntext { white-space: pre-wrap; }
+  .note .nmeta { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .notes-main .empty { color: var(--muted); text-align: center; padding: 30px 10px; }
+  #nText { min-height: 140px; margin-bottom: 10px; }
+
   .toast {
     position: fixed; left: 50%; bottom: calc(90px + var(--safe-b));
     transform: translateX(-50%) translateY(20px);
@@ -429,7 +471,9 @@
 
 <!-- ===== Main timeline: days left → right ===== -->
 <header class="topbar">
-  <div class="title" id="monthLabel">Планер</div>
+  <div class="title"><span id="monthLabel">Планер</span><small id="accLine"></small></div>
+  <button class="tb-btn icon" id="notesBtn" aria-label="Заметки"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h10l4 4v14H5z"/><path d="M15 3v4h4"/><path d="M8 12h8M8 16h6"/></svg></button>
+  <button class="tb-btn icon acc-btn" id="accBtn" aria-label="Аккаунты"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg><i class="sync-dot" id="syncDot"></i></button>
   <button class="tb-btn" id="todayBtn">Сегодня</button>
   <button class="tb-btn icon" id="menuBtn" aria-label="Меню">⋯</button>
 </header>
@@ -449,6 +493,22 @@
   <main class="strip" id="hours"></main>
   <button class="fab mic" id="micDay" aria-label="Добавить голосом"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 17v4"/><path d="M8 21h8"/></svg></button>
   <button class="fab" id="fabDay" aria-label="Добавить дело">+</button>
+</section>
+
+<!-- ===== Notes: plain list of facts without time ===== -->
+<section class="view hidden" id="notesView">
+  <header class="topbar">
+    <button class="tb-btn icon" id="notesBack" aria-label="Назад">‹</button>
+    <div class="title">Заметки<small id="notesCount"></small></div>
+  </header>
+  <main class="notes-main">
+    <form class="note-add" id="noteAddForm" autocomplete="off">
+      <textarea class="inp" id="noteNew" rows="1" maxlength="10000" placeholder="Новая заметка…"></textarea>
+      <button class="btn primary" type="submit">Добавить</button>
+    </form>
+    <input class="inp note-search" id="noteSearch" type="search" placeholder="Поиск по заметкам" autocomplete="off">
+    <div class="notes-list" id="notesList"></div>
+  </main>
 </section>
 
 <!-- ===== Sheets ===== -->
@@ -495,6 +555,41 @@
   </div>
 </form>
 
+<form class="sheet" id="noteEditor" autocomplete="off">
+  <div class="grab"></div>
+  <h2>Заметка</h2>
+  <textarea class="inp" id="nText" rows="6" maxlength="10000"></textarea>
+  <div class="actions">
+    <button type="button" class="btn danger" id="nDel">Удалить</button>
+    <button type="button" class="btn" id="nCancel">Отмена</button>
+    <button type="submit" class="btn primary">Сохранить</button>
+  </div>
+</form>
+
+<div class="sheet" id="accSheet">
+  <div class="grab"></div>
+  <h2>Аккаунты</h2>
+  <div id="accList"></div>
+  <button class="menu-item" id="accAddBtn"><span class="ico">＋</span> Добавить аккаунт по ключу</button>
+  <form id="accForm" class="acc-form hidden" autocomplete="off">
+    <div class="field">
+      <label for="accName">Название</label>
+      <input class="inp" id="accName" maxlength="40" placeholder="Например: Личное">
+    </div>
+    <div class="field">
+      <label for="accKey">Ключ</label>
+      <input class="inp mono" id="accKey" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" autocapitalize="characters" autocorrect="off" spellcheck="false" autocomplete="off">
+    </div>
+    <label class="check-row hidden" id="accCopyRow"><input type="checkbox" id="accCopy"> <span id="accCopyText"></span></label>
+    <div class="acc-msg" id="accMsg"></div>
+    <div class="actions">
+      <button type="button" class="btn" id="accCancel">Отмена</button>
+      <button type="submit" class="btn primary" id="accSubmit">Подключить</button>
+    </div>
+  </form>
+  <p class="hint">«На этом устройстве» — всё хранится только здесь, без интернета. Аккаунт по ключу синхронизируется между устройствами: данные шифруются прямо на устройстве, в облако уходит только шифр, а ключ никуда не отправляется.</p>
+</div>
+
 <div class="sheet" id="menu">
   <div class="grab"></div>
   <h2>Настройки</h2>
@@ -509,7 +604,7 @@
   <button class="menu-item" id="exportBtn"><span class="ico">⬇</span> Сохранить резервную копию</button>
   <button class="menu-item" id="importBtn"><span class="ico">⬆</span> Загрузить из копии</button>
   <button class="menu-item" id="clearDoneBtn"><span class="ico">🧹</span> Удалить выполненные</button>
-  <p class="hint">Дела хранятся в памяти браузера на этом устройстве. Иногда делайте резервную копию — её можно перенести на другое устройство.</p>
+  <p class="hint">Копия сохраняет дела и заметки текущего аккаунта в файл. Храните её как личные записи — внутри обычный текст.</p>
 </div>
 <input type="file" id="importFile" accept="application/json,.json" hidden>
 
@@ -535,33 +630,103 @@
 (() => {
   'use strict';
 
-  // ---------- Storage ----------
-  const KEY = 'planner.tasks.v1';
+  // ---------- Storage & accounts ----------
+  const KEY = 'planner.tasks.v1';             // offline account (key kept from the first version)
   const SKEY = 'planner.settings.v1';
+  const ACC_KEY = 'planner.accounts.v1';
+  const CUR_KEY = 'planner.current.v1';
+  const LOCAL = 'local';
   const store = {
     get(k, def) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch { return def; } },
-    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { toast('Не удалось сохранить в память браузера'); } }
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { toast('Не удалось сохранить в память браузера'); } },
+    del(k) { try { localStorage.removeItem(k); } catch { /* nothing to remove */ } }
   };
-  // every task passes through here (storage and backup files), so nothing unchecked reaches the HTML
+  const arr = v => Array.isArray(v) ? v : [];
+  const cleanId = v => String(v || '').replace(/[^\w-]/g, '').slice(0, 40);
+  // everything read from storage, backup files or the cloud passes through these, so nothing unchecked reaches the HTML
   const cleanTask = t => {
     if (!t || typeof t !== 'object' || !t.title || !/^\d{4}-\d{2}-\d{2}$/.test(t.date)) return null;
-    const id = String(t.id || '').replace(/[^\w-]/g, '');
+    const id = cleanId(t.id);
     if (!id) return null;
     const c = {
       id, title: String(t.title).slice(0, 500), note: String(t.note || '').slice(0, 5000), date: t.date,
       time: /^([01]\d|2[0-3]):[0-5]\d$/.test(t.time) ? t.time : '',
       dur: Math.min(Math.max(Math.round(+t.dur) || 0, 0), 1440),
       color: /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(t.color) ? t.color : '#4f7cff',
-      done: !!t.done, created: Number(t.created) || Date.now()
+      done: !!t.done, created: Number(t.created) || Date.now(), upd: Math.max(Number(t.upd) || 0, 0)
     };
     if (Number.isFinite(+t.order) && t.order !== null && t.order !== '') c.order = +t.order;
     return c;
   };
-  let tasks = store.get(KEY, []);
-  tasks = Array.isArray(tasks) ? tasks.map(cleanTask).filter(Boolean) : [];
+  const cleanNote = n => {
+    if (!n || typeof n !== 'object' || typeof n.text !== 'string' || !n.text.trim()) return null;
+    const id = cleanId(n.id);
+    if (!id) return null;
+    return { id, text: n.text.slice(0, 10000), created: Number(n.created) || Date.now(), upd: Math.max(Number(n.upd) || 0, 0) };
+  };
+  // deletions are remembered as "t:<id>" / "n:<id>" → time, so other devices learn about them
+  const cleanTombs = o => {
+    const out = {};
+    if (!o || typeof o !== 'object') return out;
+    for (const [k, v] of Object.entries(o)) if (/^[tn]:[\w-]{1,40}$/.test(k) && +v > 0) out[k] = +v;
+    return out;
+  };
+
+  // account keys: 24 characters of Crockford base32 (~120 bits), shown as XXXX-XXXX-…
+  const KEY_RE = /^[0-9A-HJKMNP-TV-Z]{24}$/;
+  const normKey = v => String(v || '').toUpperCase().replace(/[\s-]/g, '').replace(/O/g, '0').replace(/[IL]/g, '1');
+  let accounts = arr(store.get(ACC_KEY, []))
+    .map(a => a && /^[0-9a-f]{24}$/.test(a.id) && KEY_RE.test(a.key) ? { id: a.id, key: a.key, name: String(a.name || 'Аккаунт').slice(0, 40) } : null)
+    .filter(Boolean);
+  const saveAccounts = () => store.set(ACC_KEY, accounts);
+  let currentAcc = store.get(CUR_KEY, LOCAL);
+  if (!accounts.some(a => a.id === currentAcc)) currentAcc = LOCAL;
+  const sKey = (acc, what) => acc === LOCAL ? (what === 'tasks' ? KEY : `planner.${what}.v1`) : `planner.acc.${acc}.${what}`;
+
+  let tasks = [], notes = [], tombs = {}, baseline = new Map();
+  const sig = o => { const c = Object.assign({}, o); delete c.upd; return JSON.stringify(c); };
+  const resetBaseline = () => {
+    baseline = new Map([...tasks.map(t => ['t:' + t.id, sig(t)]), ...notes.map(n => ['n:' + n.id, sig(n)])]);
+  };
+  const readAccount = acc => ({
+    tasks: arr(store.get(sKey(acc, 'tasks'), [])).map(cleanTask).filter(Boolean),
+    notes: arr(store.get(sKey(acc, 'notes'), [])).map(cleanNote).filter(Boolean),
+    tombs: cleanTombs(store.get(sKey(acc, 'tombs'), {}))
+  });
+  function loadAccount(acc) {
+    currentAcc = acc;
+    ({ tasks, notes, tombs } = readAccount(acc));
+    resetBaseline();
+  }
+  function writeLocal() {
+    store.set(sKey(currentAcc, 'tasks'), tasks);
+    store.set(sKey(currentAcc, 'notes'), notes);
+    store.set(sKey(currentAcc, 'tombs'), tombs);
+  }
+  // every change goes through here: stamps edited items, remembers deletions, saves, then syncs
+  function persist() {
+    const now = Date.now(), seen = new Set();
+    const stamp = (prefix, list) => {
+      for (const it of list) {
+        const key = prefix + it.id, sg = sig(it);
+        seen.add(key);
+        if (baseline.get(key) !== sg) { it.upd = now; baseline.set(key, sg); }
+        delete tombs[key];
+      }
+    };
+    stamp('t:', tasks);
+    stamp('n:', notes);
+    for (const key of [...baseline.keys()]) if (!seen.has(key)) { tombs[key] = now; baseline.delete(key); }
+    for (const [key, at] of Object.entries(tombs)) if (now - at > 120 * 864e5) delete tombs[key];
+    writeLocal();
+    if (currentAcc !== LOCAL) scheduleSync(1500);
+  }
+  const saveTasks = persist;
+  const saveNotes = persist;
+  loadAccount(currentAcc);
+
   const settings = Object.assign({ w: 'm', color: '#4f7cff' }, store.get(SKEY, {}));
   if (!/^#[0-9a-f]{6}$/i.test(settings.color)) settings.color = '#4f7cff';
-  const saveTasks = () => store.set(KEY, tasks);
   const saveSettings = () => store.set(SKEY, settings);
 
   const COLORS = ['#4f7cff', '#22b07d', '#f5a524', '#ef4444', '#a855f7', '#ec4899', '#14b8a6', '#64748b'];
@@ -852,7 +1017,7 @@
   }
 
   $('backBtn').onclick = () => history.state && history.state.day ? history.back() : closeDay();
-  window.addEventListener('popstate', () => { if (dayDate) closeDay(); });
+  window.addEventListener('popstate', () => { if (notesOpen) closeNotes(); else if (dayDate) closeDay(); });
   $('prevDay').onclick = () => { dayDate = addDays(dayDate, -1); hoursEl.innerHTML = ''; renderDay(); scrollDayToDefaultHour(); };
   $('nextDay').onclick = () => { dayDate = addDays(dayDate, 1); hoursEl.innerHTML = ''; renderDay(); scrollDayToDefaultHour(); };
   $('dayNowBtn').onclick = () => {
@@ -1206,8 +1371,9 @@
       color: pickedColor,
       done: $('fDone').checked
     };
-    if (editingId) {
-      Object.assign(tasks.find(x => x.id === editingId), data);
+    const existing = editingId && tasks.find(x => x.id === editingId);
+    if (existing) {
+      Object.assign(existing, data);
     } else {
       tasks.push(Object.assign({ id: uid(), created: Date.now() }, data, { done: false }));
     }
@@ -1267,6 +1433,7 @@
     if (e.key === 'Escape') {
       if (drag) endDrag();
       else if (document.querySelector('.sheet.on')) closeSheets();
+      else if (notesOpen) $('notesBack').click();
       else if (dayDate) $('backBtn').click();
     }
   });
@@ -1290,7 +1457,7 @@
   };
 
   $('exportBtn').onclick = () => {
-    const blob = new Blob([JSON.stringify({ app: 'planner', version: 1, tasks }, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ app: 'planner', version: 2, tasks, notes }, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `planner-${today()}.json`;
@@ -1310,13 +1477,16 @@
       const list = Array.isArray(data) ? data : data.tasks;
       if (!Array.isArray(list)) throw new Error();
       const valid = list.map(cleanTask).filter(Boolean);
-      const replace = confirm(`В файле ${valid.length} дел.\n\nОК — заменить текущие дела.\nОтмена — добавить к текущим.`);
-      if (replace) tasks = valid;
+      const validNotes = arr(data.notes).map(cleanNote).filter(Boolean);
+      const replace = confirm(`В файле ${valid.length} дел и ${validNotes.length} заметок.\n\nОК — заменить текущие.\nОтмена — добавить к текущим.`);
+      if (replace) { tasks = valid; notes = validNotes; }
       else {
-        const ids = new Set(tasks.map(t => t.id));
+        const ids = new Set(tasks.map(t => t.id)), nids = new Set(notes.map(n => n.id));
         tasks = tasks.concat(valid.filter(t => !ids.has(t.id)));
+        notes = notes.concat(validNotes.filter(n => !nids.has(n.id)));
       }
       saveTasks();
+      renderNotes();
       closeSheets();
       rerender();
       toast('Дела загружены');
@@ -1623,6 +1793,368 @@
   $('vAdd').onclick = () => { stopListening(); commitVoice(); };
   $('vCancel').onclick = closeSheets;
 
+  // ---------- Notes ----------
+  const notesView = $('notesView');
+  let notesOpen = false, editingNote = null;
+  const plural = (n, one, few, many) => {
+    const m10 = n % 10, m100 = n % 100;
+    return m10 === 1 && m100 !== 11 ? one : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? few : many;
+  };
+  function noteDate(ms) {
+    const d = new Date(ms);
+    return `${d.getDate()} ${MONTHS_GEN[d.getMonth()]}${d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : ''}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  function renderNotes() {
+    if (!notesOpen) return;
+    const q = $('noteSearch').value.trim().toLowerCase();
+    const list = [...notes].sort((a, b) => b.created - a.created).filter(n => !q || n.text.toLowerCase().includes(q));
+    $('notesCount').textContent = notes.length ? `${notes.length} ${plural(notes.length, 'заметка', 'заметки', 'заметок')}` : '';
+    $('noteSearch').classList.toggle('hidden', notes.length < 2);
+    $('notesList').innerHTML = list.length
+      ? list.map(n => `<div class="note" data-id="${n.id}"><div class="ntext">${esc(n.text)}</div><div class="nmeta">${noteDate(n.created)}</div></div>`).join('')
+      : `<p class="empty">${q ? 'Ничего не найдено' : 'Пока нет заметок. Записывайте сюда факты, идеи, номера — всё, что не привязано ко времени.'}</p>`;
+  }
+  function openNotes() {
+    notesOpen = true;
+    $('noteSearch').value = '';
+    notesView.classList.remove('hidden');
+    renderNotes();
+    history.pushState({ notes: 1 }, '');
+  }
+  function closeNotes() {
+    closeSheets();
+    notesOpen = false;
+    notesView.classList.add('hidden');
+  }
+  const growNote = () => { const el = $('noteNew'); el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; };
+  $('notesBtn').onclick = openNotes;
+  $('notesBack').onclick = () => history.state && history.state.notes ? history.back() : closeNotes();
+  $('noteNew').addEventListener('input', growNote);
+  $('noteNew').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('noteAddForm').requestSubmit(); }
+  });
+  $('noteAddForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const text = $('noteNew').value.trim();
+    if (!text) return;
+    notes.push({ id: uid(), text, created: Date.now(), upd: 0 });
+    saveNotes();
+    $('noteNew').value = '';
+    growNote();
+    renderNotes();
+  });
+  $('noteSearch').addEventListener('input', renderNotes);
+  $('notesList').addEventListener('click', e => {
+    const el = e.target.closest('.note');
+    if (!el) return;
+    const n = notes.find(x => x.id === el.dataset.id);
+    if (!n) return;
+    editingNote = n.id;
+    $('nText').value = n.text;
+    showSheet($('noteEditor'));
+  });
+  $('noteEditor').addEventListener('submit', e => {
+    e.preventDefault();
+    const text = $('nText').value.trim();
+    const n = notes.find(x => x.id === editingNote);
+    if (!text) { $('nDel').click(); return; }
+    if (n) n.text = text;
+    else notes.push({ id: editingNote || uid(), text, created: Date.now(), upd: 0 });
+    saveNotes();
+    closeSheets();
+    renderNotes();
+  });
+  $('nDel').onclick = () => {
+    const i = notes.findIndex(x => x.id === editingNote);
+    closeSheets();
+    if (i < 0) return;
+    const [removed] = notes.splice(i, 1);
+    saveNotes();
+    renderNotes();
+    toastAction('Заметка удалена', 'Вернуть', () => { notes.push(removed); saveNotes(); renderNotes(); });
+  };
+  $('nCancel').onclick = closeSheets;
+
+  // ---------- Cloud sync: end-to-end encrypted ----------
+  // Адрес облака (Cloudflare Worker из папки server/). Пока он пуст, работают только офлайн-аккаунты.
+  // Вместе с адресом нужно разрешить его в Content-Security-Policy (connect-src) в начале файла.
+  const SYNC_URL = '';
+  const te = new TextEncoder(), td = new TextDecoder();
+  const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+  const toB64 = u8 => { let out = ''; for (let i = 0; i < u8.length; i += 0x8000) out += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(out); };
+  const fromB64 = b => Uint8Array.from(atob(b), c => c.charCodeAt(0));
+  const AAD = te.encode('planner-v1');
+  const creds = new Map();
+
+  // key → storage id, access token for the server, AES-256 key that never leaves the device.
+  // PBKDF2 makes guessing keys slow; HKDF splits the result so the token reveals nothing about the AES key.
+  async function deriveCreds(key) {
+    const subtle = crypto.subtle;
+    const base = await subtle.importKey('raw', te.encode(key), 'PBKDF2', false, ['deriveBits']);
+    const seed = await subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: te.encode('planner-sync-v1'), iterations: 300000 }, base, 256);
+    const hk = await subtle.importKey('raw', seed, 'HKDF', false, ['deriveBits', 'deriveKey']);
+    const hkdf = info => ({ name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(32), info: te.encode(info) });
+    return {
+      id: hex(await subtle.deriveBits(hkdf('planner-id'), hk, 256)).slice(0, 24),
+      auth: hex(await subtle.deriveBits(hkdf('planner-auth'), hk, 256)),
+      aes: await subtle.deriveKey(hkdf('planner-enc'), hk, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt'])
+    };
+  }
+  async function credsFor(acc) {
+    if (!creds.has(acc)) creds.set(acc, await deriveCreds(accounts.find(a => a.id === acc).key));
+    return creds.get(acc);
+  }
+  async function sealBox(obj, aes) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: AAD }, aes, te.encode(JSON.stringify(obj))));
+    const out = new Uint8Array(12 + ct.length);
+    out.set(iv);
+    out.set(ct, 12);
+    return toB64(out);
+  }
+  async function openBox(b64, aes) {
+    try {
+      const u8 = fromB64(b64);
+      const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: u8.subarray(0, 12), additionalData: AAD }, aes, u8.subarray(12));
+      return JSON.parse(td.decode(pt));
+    } catch {
+      throw { kind: 'decrypt' };   // wrong key or tampered data: AES-GCM refuses it
+    }
+  }
+  async function api(cred, method, body) {
+    let res;
+    try {
+      res = await fetch(SYNC_URL + '/v1/data', {
+        method, cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer',
+        headers: Object.assign({ Authorization: 'Bearer ' + cred.auth }, body ? { 'Content-Type': 'application/json' } : {}),
+        body: body ? JSON.stringify(body) : undefined
+      });
+    } catch {
+      throw { kind: 'offline' };
+    }
+    if (res.status === 401) throw { kind: 'auth' };
+    if (res.status !== 200 && res.status !== 409) throw { kind: 'server' };
+    let j;
+    try { j = await res.json(); } catch { throw { kind: 'server' }; }
+    if (!j || !Number.isInteger(j.rev) || ('data' in j && j.data !== null && typeof j.data !== 'string')) throw { kind: 'server' };
+    if (res.status === 409) j.conflict = true;
+    return j;
+  }
+
+  const byId = (a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  const pack = (t, n, tb) => JSON.stringify({
+    v: 1,
+    tasks: t.map(cleanTask).filter(Boolean).sort(byId),
+    notes: n.map(cleanNote).filter(Boolean).sort(byId),
+    tombs: Object.fromEntries(Object.entries(tb).sort())
+  });
+  // last-writer-wins per task/note, deletions win over older versions
+  function mergeRemote(obj) {
+    const r = { tasks: arr(obj.tasks).map(cleanTask).filter(Boolean), notes: arr(obj.notes).map(cleanNote).filter(Boolean), tombs: cleanTombs(obj.tombs) };
+    const before = pack(tasks, notes, tombs);
+    const all = Object.assign({}, tombs);
+    for (const [k, v] of Object.entries(r.tombs)) if (!(all[k] >= v)) all[k] = v;
+    const pick = (prefix, mine, theirs) => {
+      const m = new Map(mine.map(x => [x.id, x]));
+      for (const x of theirs) { const l = m.get(x.id); if (!l || x.upd > l.upd) m.set(x.id, x); }
+      return [...m.values()].filter(x => !(all[prefix + x.id] >= x.upd));
+    };
+    tasks = pick('t:', tasks, r.tasks);
+    notes = pick('n:', notes, r.notes);
+    tombs = all;
+    resetBaseline();
+    writeLocal();
+    if (pack(tasks, notes, tombs) !== before) refreshViews();
+    return pack(r.tasks, r.notes, r.tombs);
+  }
+
+  let syncState = 'idle', syncAt = 0, syncBusy = false, syncAgain = false, syncTimer = null;
+  function scheduleSync(ms) {
+    if (currentAcc === LOCAL) return;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(() => { syncTimer = null; syncNow(); }, ms);
+  }
+  async function syncNow() {
+    const acc = currentAcc;
+    if (acc === LOCAL) return;
+    if (!SYNC_URL) { setSync('nocloud'); return; }
+    if (syncBusy) { syncAgain = true; return; }
+    syncBusy = true;
+    setSync('sync');
+    let result = 'ok';
+    try {
+      if (!(window.crypto && crypto.subtle)) throw { kind: 'nocrypto' };
+      const cred = await credsFor(acc);
+      for (let i = 0; ; i++) {
+        const remote = await api(cred, 'GET');
+        const obj = remote.data ? await openBox(remote.data, cred.aes) : null;
+        if (acc !== currentAcc) { result = null; break; }
+        const theirs = obj ? mergeRemote(obj) : null;
+        const mine = pack(tasks, notes, tombs);
+        if (theirs === mine) break;                      // the cloud already has everything
+        const put = await api(cred, 'PUT', { baseRev: remote.rev, data: await sealBox(JSON.parse(mine), cred.aes) });
+        if (!put.conflict) break;
+        if (i >= 3) { result = 'server'; break; }        // someone keeps writing: try again later
+      }
+    } catch (e) {
+      result = (e && e.kind) || 'error';
+    }
+    syncBusy = false;
+    if (result && acc === currentAcc) setSync(result);
+    if (syncAgain) { syncAgain = false; scheduleSync(300); }
+  }
+
+  const SYNC_TEXT = {
+    idle: 'облако', sync: 'синхронизация…', offline: 'нет связи — изменения сохранены на устройстве',
+    auth: 'ключ не принят облаком', decrypt: 'не удалось расшифровать данные', server: 'ошибка облака, повторю позже',
+    error: 'ошибка синхронизации', nocloud: 'облако ещё не подключено', nocrypto: 'шифрование недоступно — откройте по https'
+  };
+  function syncText() {
+    if (currentAcc === LOCAL) return 'только на этом устройстве';
+    if (syncState === 'ok') { const d = new Date(syncAt); return `синхронизировано в ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+    return SYNC_TEXT[syncState] || '';
+  }
+  function setSync(st) {
+    syncState = st;
+    if (st === 'ok') syncAt = Date.now();
+    renderAccLine();
+    if ($('accSheet').classList.contains('on')) renderAccounts();
+  }
+  function renderAccLine() {
+    const a = accounts.find(x => x.id === currentAcc);
+    $('accLine').textContent = a ? `☁ ${a.name} · ${syncText()}` : '';
+    $('syncDot').className = 'sync-dot ' + (!a ? 'local' : syncState === 'ok' ? 'ok' : syncState === 'sync' || syncState === 'idle' ? 'busy' : 'warn');
+  }
+  function refreshViews() {
+    rerender();
+    renderNotes();
+    renderAccLine();
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { if (syncTimer) { clearTimeout(syncTimer); syncTimer = null; syncNow(); } }
+    else scheduleSync(200);
+  });
+  window.addEventListener('online', () => scheduleSync(200));
+  setInterval(() => { if (!document.hidden && !drag) syncNow(); }, 45000);
+
+  // ---------- Accounts UI ----------
+  let accMenu = null;
+  function renderAccounts() {
+    const row = (id, ico, name, sub, on, more) => `
+      <div class="acc-row${on ? ' on' : ''}" data-acc="${id}">
+        <span class="acc-ico">${ico}</span>
+        <div class="acc-main"><b>${esc(name)}</b><small>${esc(sub)}</small></div>
+        ${more ? '<button class="acc-more" data-act="acc-menu" aria-label="Действия">⋯</button>' : ''}
+        <span class="acc-check">${on ? '✓' : ''}</span>
+      </div>
+      ${more && accMenu === id ? `<div class="acc-actions" data-acc="${id}">
+        <button data-act="acc-rename">Переименовать</button>
+        <button data-act="acc-logout" class="danger">Выйти на этом устройстве</button>
+      </div>` : ''}`;
+    $('accList').innerHTML = row(LOCAL, '📱', 'На этом устройстве', 'офлайн, без облака', currentAcc === LOCAL, false) +
+      accounts.map(a => row(a.id, '☁', a.name, a.id === currentAcc ? syncText() : 'по ключу …' + a.key.slice(-4), a.id === currentAcc, true)).join('');
+  }
+  function openAccounts() {
+    accMenu = null;
+    $('accForm').classList.add('hidden');
+    $('accAddBtn').classList.remove('hidden');
+    renderAccounts();
+    showSheet($('accSheet'));
+  }
+  async function switchAccount(id) {
+    if (id === currentAcc) return;
+    if (syncTimer || syncBusy) { clearTimeout(syncTimer); syncTimer = null; await syncNow(); }   // upload pending changes first
+    loadAccount(id);
+    store.set(CUR_KEY, id);
+    syncState = 'idle';
+    refreshViews();
+    scheduleSync(50);
+  }
+  async function logout(id) {
+    const a = accounts.find(x => x.id === id);
+    if (!a) return;
+    const unsynced = id === currentAcc && syncState !== 'ok';
+    if (!confirm(`Выйти из «${a.name}» на этом устройстве?\n\nКлюч и копия данных будут удалены с этого устройства. В облаке всё останется — чтобы вернуться, снова введите ключ.` +
+      (unsynced ? '\n\n⚠ Последние изменения ещё не попали в облако и будут потеряны.' : ''))) return;
+    if (id === currentAcc) await switchAccount(LOCAL);
+    ['tasks', 'notes', 'tombs'].forEach(w => store.del(sKey(id, w)));
+    accounts = accounts.filter(x => x.id !== id);
+    creds.delete(id);
+    saveAccounts();
+    accMenu = null;
+    renderAccounts();
+    renderAccLine();
+  }
+  $('accBtn').onclick = openAccounts;
+  $('accList').addEventListener('click', e => {
+    const rowEl = e.target.closest('[data-acc]');
+    if (!rowEl) return;
+    const id = rowEl.dataset.acc;
+    const act = e.target.closest('[data-act]');
+    const a = accounts.find(x => x.id === id);
+    if (act && act.dataset.act === 'acc-menu') { accMenu = accMenu === id ? null : id; renderAccounts(); return; }
+    if (act && act.dataset.act === 'acc-rename') {
+      const name = prompt('Название аккаунта', a.name);
+      if (name && name.trim()) { a.name = name.trim().slice(0, 40); saveAccounts(); renderAccounts(); renderAccLine(); }
+      return;
+    }
+    if (act && act.dataset.act === 'acc-logout') { logout(id); return; }
+    if (rowEl.classList.contains('acc-actions')) return;
+    closeSheets();
+    switchAccount(id);
+  });
+  $('accAddBtn').onclick = () => {
+    const local = readAccount(LOCAL);
+    $('accName').value = '';
+    $('accKey').value = '';
+    $('accMsg').textContent = '';
+    $('accCopy').checked = false;
+    $('accCopyRow').classList.toggle('hidden', !local.tasks.length && !local.notes.length);
+    $('accCopyText').textContent = `Скопировать в аккаунт дела (${local.tasks.length}) и заметки (${local.notes.length}) с этого устройства`;
+    $('accAddBtn').classList.add('hidden');
+    $('accForm').classList.remove('hidden');
+    setTimeout(() => $('accName').focus(), 60);
+  };
+  $('accCancel').onclick = () => { $('accForm').classList.add('hidden'); $('accAddBtn').classList.remove('hidden'); $('accKey').value = ''; };
+  $('accForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const msg = t => { $('accMsg').textContent = t; };
+    const key = normKey($('accKey').value);
+    if (!KEY_RE.test(key)) { msg('Ключ — 24 буквы и цифры, например ABCD-EFGH-…'); return; }
+    if (!SYNC_URL) { msg('Облако ещё не подключено — аккаунты по ключу заработают после его настройки.'); return; }
+    if (!(window.crypto && crypto.subtle)) { msg('Этот браузер не поддерживает шифрование — откройте планер по https-ссылке.'); return; }
+    $('accSubmit').disabled = true;
+    msg('Проверяю ключ…');
+    try {
+      const cred = await deriveCreds(key);
+      if (accounts.some(a => a.id === cred.id)) { msg('Этот аккаунт уже добавлен.'); return; }
+      const remote = await api(cred, 'GET');
+      if (remote.data) await openBox(remote.data, cred.aes);
+      const acc = { id: cred.id, key, name: ($('accName').value.trim() || `Аккаунт ${accounts.length + 1}`).slice(0, 40) };
+      const copy = $('accCopy').checked ? readAccount(LOCAL) : null;
+      accounts.push(acc);
+      saveAccounts();
+      creds.set(acc.id, cred);
+      $('accKey').value = '';
+      msg('');
+      closeSheets();
+      await switchAccount(acc.id);
+      if (copy) {
+        const ids = new Set(tasks.map(t => t.id)), nids = new Set(notes.map(n => n.id));
+        tasks = tasks.concat(copy.tasks.filter(t => !ids.has(t.id)));
+        notes = notes.concat(copy.notes.filter(n => !nids.has(n.id)));
+        saveTasks();
+        refreshViews();
+      }
+      toast(`Аккаунт «${acc.name}» подключён`);
+    } catch (err) {
+      msg({ auth: 'Ключ не подходит.', offline: 'Нет связи с облаком. Проверьте интернет.', decrypt: 'Данные в облаке не расшифровываются этим ключом.' }[err && err.kind] || 'Не удалось подключиться к облаку.');
+    } finally {
+      $('accSubmit').disabled = false;
+    }
+  });
+
   // ---------- Global buttons ----------
   $('todayBtn').onclick = () => scrollToDate(today(), true);
   $('fab').onclick = () => openEditor(null, { date: today() });
@@ -1641,10 +2173,12 @@
 
   // ---------- Start ----------
   $('nojs').remove();
+  renderAccLine();
+  scheduleSync(100);
   applyWidth();
   renderTimeline();
   scrollToDate(today(), false);
-  if (history.state && history.state.day) history.replaceState(null, '');
+  if (history.state && (history.state.day || history.state.notes)) history.replaceState(null, '');
 })();
 </script>
 </body>

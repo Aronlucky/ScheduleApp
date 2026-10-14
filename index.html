@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src https://planner-sync.nikineru91.workers.dev; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: 'self'; connect-src https://planner-sync.nikineru91.workers.dev; worker-src 'self'; manifest-src 'self'; form-action 'none'; base-uri 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f4f5f9" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#15171d" media="(prefers-color-scheme: dark)">
@@ -11,6 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="Планер">
 <meta name="format-detection" content="telephone=no">
 <link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAACzklEQVR42u3dMU4bQRSAYWNtEVFFNBwgylGoTRUkX4CaHlIkB6DmAkhQJTVHsegQnSUqZMkFFCmTIkZv3nhmvr9nzO58vF1gMQeLy7eZ9K/mToHgEByCQ3AIDsEhOASH4BAcEhyCQ3AIDsEhOASH4BAcgkOCQ3AIDsEhOASH4BAcgkNwSHAIDu3eVGLRmwsntkLn1yaHXFYEh+AQHIJDcAgOCQ7BITgEh+AQHIJDcAgOwSHBITgEh+AQHIKjVNvNertZj/nq4RX5o6bjo2rH8/Rc8xOo++omh+AQHIJDcAgODdKU/Hpffn8PWedx8WPXD3k5OYk6is8PDybHnsr4wFKBMsJXgyNSxq4LltjLEXzMG5Xx/8uW28XufbghFRyCQ3AIDsEhOASH4BAcGrfJKcjp7tsmZJ2z+08mBxnFl4KjKxnJPuBoTEamjyQcH3hwq+Kyyp4c4RtJRleXlcDtJKPDb2VtqskhOASH4JCq3pC+3n4NWedwubJ5XU2OKBmxS6k+jvDt5KMTHIU2kg83pA1X6PGLnKc64GjPR9rzPnA05iPzSTCPCbZ9fTE5BIfGxFHoB5p+TtrJ5AjfSDK6uiE9XK6G/d3K6VXMOr9+dopj2C/3KBl/lkrz4Ya0JRmFFoSjExmZPuAQHILj78q9T3n374A+xOQosYsjvDf+KJeV2L0c5L8mDPRb2UF21OQQHIJDcAgOwSE4BIcER3KFHszJed4HjvZ8eBKMj8oyZv7irfXri8khOASH4BAcgkNwSHAIDsEhOASHesaR9gYSKnrOTQ7Bof3B4crS+jXF5FAlHIZH02Oj+OTgo10ZLiuqisPwaPfcTmnH0OLj18OyyL6sGCHNnckp/6iMkFa+wKaKR0jJng/dg8Xlm7Mv38oKDsEhOASH4BAcgkNwCA4JDsEhOASH4BAcgkNwCA7BIcEhOASH4BAcgkNwCA511TvjapRMRJeExwAAAABJRU5ErkJggg==">
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAACzklEQVR42u3dMU4bQRSAYWNtEVFFNBwgylGoTRUkX4CaHlIkB6DmAkhQJTVHsegQnSUqZMkFFCmTIkZv3nhmvr9nzO58vF1gMQeLy7eZ9K/mToHgEByCQ3AIDsEhOASH4BAcEhyCQ3AIDsEhOASH4BAcgkOCQ3AIDsEhOASH4BAcgkNwSHAIDu3eVGLRmwsntkLn1yaHXFYEh+AQHIJDcAgOCQ7BITgEh+AQHIJDcAgOwSHBITgEh+AQHIKjVNvNertZj/nq4RX5o6bjo2rH8/Rc8xOo++omh+AQHIJDcAgODdKU/Hpffn8PWedx8WPXD3k5OYk6is8PDybHnsr4wFKBMsJXgyNSxq4LltjLEXzMG5Xx/8uW28XufbghFRyCQ3AIDsEhOASH4BAcGrfJKcjp7tsmZJ2z+08mBxnFl4KjKxnJPuBoTEamjyQcH3hwq+Kyyp4c4RtJRleXlcDtJKPDb2VtqskhOASH4JCq3pC+3n4NWedwubJ5XU2OKBmxS6k+jvDt5KMTHIU2kg83pA1X6PGLnKc64GjPR9rzPnA05iPzSTCPCbZ9fTE5BIfGxFHoB5p+TtrJ5AjfSDK6uiE9XK6G/d3K6VXMOr9+dopj2C/3KBl/lkrz4Ya0JRmFFoSjExmZPuAQHILj78q9T3n374A+xOQosYsjvDf+KJeV2L0c5L8mDPRb2UF21OQQHIJDcAgOwSE4BIcER3KFHszJed4HjvZ8eBKMj8oyZv7irfXri8khOASH4BAcgkNwSHAIDsEhOASHesaR9gYSKnrOTQ7Bof3B4crS+jXF5FAlHIZH02Oj+OTgo10ZLiuqisPwaPfcTmnH0OLj18OyyL6sGCHNnckp/6iMkFa+wKaKR0jJng/dg8Xlm7Mv38oKDsEhOASH4BAcgkNwCA4JDsEhOASH4BAcgkNwCA7BIcEhOASH4BAcgkNwCA511TvjapRMRJeExwAAAABJRU5ErkJggg==">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Планер</title>
@@ -355,7 +356,10 @@
     padding: 6px 11px; border-radius: 999px; font-size: 13px; font-weight: 600;
     background: var(--bg); border: 1px solid var(--line);
   }
+  .durs button:disabled { opacity: .4; }
   .durs button.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .rem-hint { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+  .rem-hint:empty { display: none; }
   .endrow { display: flex; align-items: center; gap: 8px; margin-top: 8px; color: var(--muted); font-size: 14px; }
   .endrow .inp { flex: 0 1 150px; }
   .endrow .inp:disabled { opacity: .5; }
@@ -540,6 +544,11 @@
     <div class="endrow">до <input class="inp" id="fEnd" type="time"> <span id="durTxt"></span></div>
   </div>
   <div class="field">
+    <label>Напоминание</label>
+    <div class="durs" id="rems"></div>
+    <div class="rem-hint" id="remHint"></div>
+  </div>
+  <div class="field">
     <label>Цвет</label>
     <div class="swatches" id="swatches"></div>
   </div>
@@ -570,6 +579,7 @@
   <div class="grab"></div>
   <h2>Аккаунты</h2>
   <div id="accList"></div>
+  <button class="menu-item hidden" id="syncNowBtn"><span class="ico">↻</span> Синхронизировать сейчас</button>
   <button class="menu-item" id="accAddBtn"><span class="ico">＋</span> Добавить аккаунт по ключу</button>
   <form id="accForm" class="acc-form hidden" autocomplete="off">
     <div class="field">
@@ -642,6 +652,7 @@
     del(k) { try { localStorage.removeItem(k); } catch { /* nothing to remove */ } }
   };
   const arr = v => Array.isArray(v) ? v : [];
+  const REMINDS = [0, 5, 15, 30, 60];           // minutes before the task
   const cleanId = v => String(v || '').replace(/[^\w-]/g, '').slice(0, 40);
   // everything read from storage, backup files or the cloud passes through these, so nothing unchecked reaches the HTML
   const cleanTask = t => {
@@ -656,6 +667,7 @@
       done: !!t.done, created: Number(t.created) || Date.now(), upd: Math.max(Number(t.upd) || 0, 0)
     };
     if (Number.isFinite(+t.order) && t.order !== null && t.order !== '') c.order = +t.order;
+    if (REMINDS.includes(t.remind)) c.remind = t.remind;
     return c;
   };
   const cleanNote = n => {
@@ -719,6 +731,7 @@
     for (const key of [...baseline.keys()]) if (!seen.has(key)) { tombs[key] = now; baseline.delete(key); }
     for (const [key, at] of Object.entries(tombs)) if (now - at > 120 * 864e5) delete tombs[key];
     writeLocal();
+    scheduleReminders();
     if (currentAcc !== LOCAL) scheduleSync(1500);
   }
   const saveTasks = persist;
@@ -789,6 +802,7 @@
   const fromMin = m => m >= DAY_MIN ? '24:00' : `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
   const durLabel = m => m < 60 ? `${m} мин` : m % 60 ? `${Math.floor(m / 60)} ч ${m % 60} мин` : `${m / 60} ч`;
   const timeLabel = t => !t.time ? '' : t.dur ? `${t.time}–${fromMin(Math.min(toMin(t.time) + t.dur, DAY_MIN))}` : t.time;
+  const bell = t => t.time && t.remind != null ? ' 🔔' : '';
 
   // ---------- Task card ----------
   function card(t) {
@@ -796,7 +810,7 @@
     return `<div class="task${t.done ? ' done' : ''}" data-act="edit" data-id="${t.id}" style="${style}">
       <button class="chk" data-act="toggle" aria-label="Выполнено"></button>
       <div class="tbody">
-        ${t.time ? `<div class="ttime">${timeLabel(t)}</div>` : ''}
+        ${t.time ? `<div class="ttime">${timeLabel(t)}${bell(t)}</div>` : ''}
         <div class="ttitle">${esc(t.title)}</div>
         ${t.note ? `<div class="tnote">${esc(t.note)}</div>` : ''}
       </div>
@@ -926,7 +940,7 @@
       `left:${toMin(t.time) / 60 * hw}px;width:${w}px;top:${10 + lane * LANE}px`;
     return `<div class="${cls.join(' ')}" data-act="edit" data-id="${t.id}" style="${style}" title="${esc(t.title)}">
       <button class="chk" data-act="toggle" aria-label="Выполнено"></button>
-      <div class="tbody"><div class="ttime">${timeLabel(t)}</div><div class="ttitle">${esc(t.title)}</div></div>
+      <div class="tbody"><div class="ttime">${timeLabel(t)}${bell(t)}</div><div class="ttitle">${esc(t.title)}</div></div>
       <div class="rz" data-act="resize" title="Потяните, чтобы изменить длительность"></div>
     </div>`;
   }
@@ -1315,7 +1329,23 @@
     const d = toMin(end) - toMin(time);
     if (d > 0) { pickedDur = d; renderDurs(true); }
   });
-  $('fTime').addEventListener('input', () => renderDurs());
+  $('fTime').addEventListener('input', () => { renderDurs(); renderRems(); });
+
+  let pickedRemind = null;
+  const REMIND_OPTS = [[null, 'Нет'], [0, 'В момент'], [5, 'За 5 мин'], [15, 'За 15 мин'], [30, 'За 30 мин'], [60, 'За 1 ч']];
+  function renderRems() {
+    const time = $('fTime').value;
+    $('rems').innerHTML = REMIND_OPTS.map(([m, l]) =>
+      `<button type="button" data-rem="${m === null ? '' : m}" class="${m === pickedRemind ? 'on' : ''}"${!time && m !== null ? ' disabled' : ''}>${l}</button>`).join('');
+    $('remHint').textContent = !time ? 'Напоминание можно поставить делу со временем.' : pickedRemind == null ? '' : notifyHint();
+  }
+  $('rems').addEventListener('click', async e => {
+    const b = e.target.closest('[data-rem]');
+    if (!b || b.disabled) return;
+    pickedRemind = b.dataset.rem === '' ? null : +b.dataset.rem;
+    renderRems();
+    if (pickedRemind != null) { await askNotifyPermission(); renderRems(); }
+  });
 
   function renderSwatches() {
     const isCustom = !COLORS.includes(pickedColor);
@@ -1348,6 +1378,8 @@
     $('fTime').value = t ? (t.time || '') : (preset.time || '');
     pickedDur = t ? (t.dur || 0) : (preset.dur || 0);
     renderDurs();
+    pickedRemind = t && t.remind != null ? t.remind : preset.remind != null ? preset.remind : null;
+    renderRems();
     $('fDone').checked = t ? !!t.done : false;
     $('doneRow').classList.toggle('hidden', !t);
     $('delBtn').classList.toggle('hidden', !t);
@@ -1371,8 +1403,10 @@
       color: pickedColor,
       done: $('fDone').checked
     };
+    if (pickedRemind != null && data.time) data.remind = pickedRemind;
     const existing = editingId && tasks.find(x => x.id === editingId);
     if (existing) {
+      delete existing.remind;
       Object.assign(existing, data);
     } else {
       tasks.push(Object.assign({ id: uid(), created: Date.now() }, data, { done: false }));
@@ -1415,7 +1449,7 @@
   }
 
   $('cancelBtn').onclick = closeSheets;
-  $('clrTime').onclick = () => { $('fTime').value = ''; renderDurs(); };
+  $('clrTime').onclick = () => { $('fTime').value = ''; renderDurs(); renderRems(); };
 
   function showSheet(el) {
     closeSheets();
@@ -1647,6 +1681,7 @@
     if (!time && pod) time = { утра: '09:00', дня: '13:00', вечера: '19:00', ночи: '23:00' }[pod];
 
     // ----- title: what's left, minus "добавь / напомни мне / надо" and stray prepositions -----
+    const remind = /^\s*(?:пожалуйста[,\s]+)?напомн/i.test(orig) ? 0 : null;
     let title = chars.join('').replace(/\s+/g, ' ').trim();
     title = title.replace(R(`^(?:(?:пожалуйста|ну|так)[,\\s]+)*(?:(?:добав|запиш|созда|напомн|постав|запланир)\\p{L}*|нужно|надо)(?:\\s+мне)?(?:\\s+(?:дело|задачу|задача|напоминание))?${E}[\\s,:—-]*`, 'iu'), '');
     title = title.replace(/\s+([,.!?;:])/g, '$1').replace(/([,;:])(?:\s*[,;:])+/g, '$1');
@@ -1657,7 +1692,7 @@
                    .replace(R(`(?:\\s(?:в|во|на|к|и|а|с|до)|[\\s,.;:—-])+$`, 'iu'), '');
     } while (title !== prev);
     title = title.charAt(0).toUpperCase() + title.slice(1);
-    return { title, date, time, color, dur: time ? dur : null };
+    return { title, date, time, color, dur: time ? dur : null, remind: time ? remind : null };
   }
 
   // ---------- Voice sheet ----------
@@ -1759,6 +1794,7 @@
       id: uid(), created: Date.now(), title: p.title, note: '',
       date: p.date || defaultDate(), time: p.time || '', dur: p.dur || 0, color: p.color || settings.color, done: false
     };
+    if (p.remind != null) { t.remind = p.remind; askNotifyPermission(); }
     tasks.push(t);
     saveTasks();
     closeSheets();
@@ -2005,7 +2041,7 @@
   }
 
   const SYNC_TEXT = {
-    idle: 'облако', sync: 'синхронизация…', offline: 'нет связи — изменения сохранены на устройстве',
+    idle: 'облако', sync: 'синхронизация…', offline: 'нет сети — синхронизирую, когда появится',
     auth: 'ключ не принят облаком', decrypt: 'не удалось расшифровать данные', server: 'ошибка облака, повторю позже',
     error: 'ошибка синхронизации', nocloud: 'облако ещё не подключено', nocrypto: 'шифрование недоступно — откройте по https'
   };
@@ -2026,6 +2062,7 @@
     $('syncDot').className = 'sync-dot ' + (!a ? 'local' : syncState === 'ok' ? 'ok' : syncState === 'sync' || syncState === 'idle' ? 'busy' : 'warn');
   }
   function refreshViews() {
+    scheduleReminders();
     rerender();
     renderNotes();
     renderAccLine();
@@ -2052,6 +2089,7 @@
         <button data-act="acc-rename">Переименовать</button>
         <button data-act="acc-logout" class="danger">Выйти на этом устройстве</button>
       </div>` : ''}`;
+    $('syncNowBtn').classList.toggle('hidden', currentAcc === LOCAL);
     $('accList').innerHTML = row(LOCAL, '📱', 'На этом устройстве', 'офлайн, без облака', currentAcc === LOCAL, false) +
       accounts.map(a => row(a.id, '☁', a.name, a.id === currentAcc ? syncText() : 'по ключу …' + a.key.slice(-4), a.id === currentAcc, true)).join('');
   }
@@ -2087,6 +2125,7 @@
     renderAccLine();
   }
   $('accBtn').onclick = openAccounts;
+  $('syncNowBtn').onclick = () => { syncNow(); };
   $('accList').addEventListener('click', e => {
     const rowEl = e.target.closest('[data-acc]');
     if (!rowEl) return;
@@ -2171,8 +2210,122 @@
     else if (dayDate === today() && !drag) renderDay();   // move the "now" line
   }, 60000);
 
+  // ---------- Reminders ----------
+  // Planner open → the page shows them itself. Planner closed → the cloud sends an empty push at the
+  // right minute (it only knows the times), and sw.js shows the text kept on this device.
+  const VAPID_PUBLIC = 'BNsg9qCBFioqBCWZzZwL6UcWYinV8v4qYV6YXKh0XKnMCOQxb7WKi-XoWRtTK4OXJVVUS4gatzUDrlhcpKq96hs';
+  const canNotify = () => 'Notification' in window;
+  const canPush = () => 'serviceWorker' in navigator && 'PushManager' in window && canNotify() && !!SYNC_URL;
+  const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  function notifyHint() {
+    if (!canNotify()) return isIOS ? 'На iPhone уведомления работают, когда планер открыт с экрана «Домой» (iOS 16.4+).' : 'Этот браузер не умеет показывать уведомления — напомню, пока планер открыт.';
+    if (Notification.permission === 'denied') return 'Уведомления запрещены в настройках браузера — разрешите их для этого сайта.';
+    if (Notification.permission !== 'granted') return 'Браузер спросит разрешение на уведомления.';
+    if (!canPush()) return 'Уведомление придёт, пока планер открыт.';
+    if (!accounts.length) return 'Пока планер открыт — уведомление придёт. Чтобы приходили и при закрытом, подключите аккаунт по ключу.';
+    return 'Уведомление придёт, даже если планер закрыт.';
+  }
+  async function askNotifyPermission() {
+    if (!canNotify() || Notification.permission !== 'default') return;
+    try { await Notification.requestPermission(); } catch { /* old Safari: callback form */ }
+    scheduleReminders(0);
+  }
+  const remindAt = t => {
+    const [y, m, d] = t.date.split('-').map(Number), [h, mi] = t.time.split(':').map(Number);
+    return new Date(y, m - 1, d, h, mi).getTime() - t.remind * 60000;
+  };
+  // upcoming reminders of every account on this device
+  function upcomingReminders() {
+    const now = Date.now(), out = [];
+    for (const acc of [LOCAL, ...accounts.map(a => a.id)]) {
+      for (const t of acc === currentAcc ? tasks : readAccount(acc).tasks) {
+        if (t.remind == null || !t.time || t.done) continue;
+        const at = remindAt(t);
+        if (at > now - 15 * 60e3 && at < now + 60 * 864e5) {
+          out.push({ tag: `${t.id}@${at}`, at, title: t.title, body: `${dayLabel(t.date)}, ${timeLabel(t)}${t.remind ? ` · через ${durLabel(t.remind)}` : ''}` });
+        }
+      }
+    }
+    return out.sort((a, b) => a.at - b.at).slice(0, 500);
+  }
+  function idbPut(key, value) {
+    return new Promise(resolve => {
+      try {
+        const open = indexedDB.open('planner', 1);
+        open.onupgradeneeded = () => open.result.createObjectStore('kv');
+        open.onerror = () => resolve();
+        open.onsuccess = () => {
+          const tx = open.result.transaction('kv', 'readwrite');
+          tx.objectStore('kv').put(value, key);
+          tx.oncomplete = tx.onerror = () => resolve();
+        };
+      } catch { resolve(); }
+    });
+  }
+  let remTimer = null, reminders = [];
+  const FIRED_KEY = 'planner.fired.v1';
+  function scheduleReminders(ms = 800) {
+    clearTimeout(remTimer);
+    remTimer = setTimeout(updateReminders, ms);
+  }
+  async function updateReminders() {
+    reminders = upcomingReminders();
+    await idbPut('reminders', reminders);
+    checkReminders();
+    registerPush();
+  }
+  // show the ones that are due now (each only once on this device)
+  async function checkReminders() {
+    const now = Date.now();
+    const fired = store.get(FIRED_KEY, {});
+    for (const k of Object.keys(fired)) if (fired[k] < now - 2 * 864e5) delete fired[k];
+    const due = reminders.filter(r => r.at <= now && r.at > now - 15 * 60e3 && !fired[r.tag]);
+    for (const r of due) {
+      fired[r.tag] = r.at;
+      toast(`🔔 ${r.title} — ${r.body}`);
+      if (canNotify() && Notification.permission === 'granted') {
+        try {
+          const reg = 'serviceWorker' in navigator && await navigator.serviceWorker.getRegistration();
+          if (reg) await reg.showNotification(r.title, { body: r.body, tag: r.tag, icon: 'icon-192.png' });
+          else new Notification(r.title, { body: r.body, tag: r.tag });
+        } catch { /* the in-app toast is already shown */ }
+      }
+    }
+    if (due.length) store.set(FIRED_KEY, fired);
+  }
+  // tell the cloud only *when* to wake this device; skipped if nothing changed
+  async function registerPush() {
+    if (!canPush() || Notification.permission !== 'granted' || !accounts.length) return;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const times = [...new Set(reminders.map(r => r.at).filter(at => at > Date.now()))];
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub && !times.length) return;
+      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: fromB64url(VAPID_PUBLIC) });
+      const sent = JSON.stringify([sub.endpoint, times]);
+      if (sent === sessionStorage.getItem('planner.push')) return;
+      const acc = accounts.find(a => a.id === currentAcc) || accounts[0];
+      const cred = await credsFor(acc.id);
+      const res = await fetch(SYNC_URL + '/v1/push', {
+        method: 'POST', cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer',
+        headers: { Authorization: 'Bearer ' + cred.auth, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endpoint: sub.endpoint, times })
+      });
+      if (res.ok) sessionStorage.setItem('planner.push', sent);
+    } catch { /* offline or push unavailable: retried on the next change */ }
+  }
+  const fromB64url = v => fromB64(v.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((v.length + 3) % 4));
+  setInterval(checkReminders, 20000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) scheduleReminders(300); });
+
+  // offline copy of the site + background notifications (only over https / localhost)
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+    navigator.serviceWorker.register('sw.js').catch(() => { /* site still works online */ });
+  }
+
   // ---------- Start ----------
   $('nojs').remove();
+  scheduleReminders(500);
   renderAccLine();
   scheduleSync(100);
   applyWidth();

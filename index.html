@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src https://planner-sync.nikineru91.workers.dev; form-action 'none'; base-uri 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f4f5f9" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#15171d" media="(prefers-color-scheme: dark)">
@@ -1876,9 +1876,9 @@
   $('nCancel').onclick = closeSheets;
 
   // ---------- Cloud sync: end-to-end encrypted ----------
-  // Адрес облака (Cloudflare Worker из папки server/). Пока он пуст, работают только офлайн-аккаунты.
-  // Вместе с адресом нужно разрешить его в Content-Security-Policy (connect-src) в начале файла.
-  const SYNC_URL = '';
+  // Адрес облака (Cloudflare Worker из папки server/). При смене адреса поменяйте и connect-src
+  // в Content-Security-Policy в начале файла: страница может обращаться только к нему.
+  const SYNC_URL = 'https://planner-sync.nikineru91.workers.dev';
   const te = new TextEncoder(), td = new TextDecoder();
   const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
   const toB64 = u8 => { let out = ''; for (let i = 0; i < u8.length; i += 0x8000) out += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(out); };
